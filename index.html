@@ -21,14 +21,20 @@
 
     <!-- Navigation Modes -->
     <nav class="nav-tabs">
-      <button class="nav-tab active" id="tab-misi" onclick="app.switchTab('misi')">🎯 Misi Bertingkat (SMK 10)</button>
+      <button class="nav-tab active" id="tab-misi" onclick="app.switchTab('misi')">🎯 Misi Praktik (SMK 10)</button>
       <button class="nav-tab" id="tab-troubleshoot" onclick="app.switchTab('troubleshoot')">🛠️ Troubleshooting (UKK)</button>
       <button class="nav-tab" id="tab-sandbox" onclick="app.switchTab('sandbox')">🧪 Meja Kerja Bebas (Lab)</button>
       <button class="nav-tab" id="tab-puil" onclick="togglePUILModal(true)">📖 Standar PUIL & K3</button>
     </nav>
 
-    <!-- Student Stats & Sound Toggle -->
+    <!-- Quick Tools, Student Stats & Sound Toggle -->
     <div class="user-stats">
+      <button class="btn btn-sm btn-outline" onclick="app.showOnboardingModal()" title="Lihat Panduan Singkat">
+        ❓ Panduan
+      </button>
+      <button class="btn btn-sm btn-outline" onclick="app.toggleFullscreen()" title="Layar Penuh">
+        ⛶ Layar Penuh
+      </button>
       <div class="stat-pill stat-pill-xp">
         <span>⭐</span>
         <span id="total-xp">0 XP</span>
@@ -46,19 +52,29 @@
   <!-- MAIN WORKSPACE -->
   <main class="main-wrapper">
     
-    <!-- LEFT SIDEBAR: Instructions & Component Selector -->
+    <!-- LEFT SIDEBAR: Instructions, Live Checklist & Component Selector -->
     <aside class="sidebar">
       
       <!-- 1. MISI PANEL (Active in 'misi' mode) -->
       <div id="mission-info-panel">
         <div class="sidebar-section">
-          <span class="mission-badge" id="mission-badge">Dasar & K3 • Mudah</span>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span class="mission-badge" id="mission-badge">Dasar & K3 • Mudah</span>
+            <button class="btn btn-sm btn-amber" onclick="app.showSchematicModal()" style="font-size:0.72rem; padding:3px 8px;">
+              💡 Intip Skema (SOP)
+            </button>
+          </div>
           <h2 class="mission-title" id="mission-title">Level 1: K3 Listrik & Penggunaan Tespen</h2>
           <div class="mission-objective" id="mission-objective">
             Tugas akan dimuat di sini...
           </div>
+
+          <!-- LIVE STEP-BY-STEP CHECKLIST -->
+          <div id="live-checklist-container" class="checklist-container">
+            <!-- Populated live by app.updateChecklistUI() -->
+          </div>
           
-          <div class="section-title">📘 Teori Singkat Kejuruan</div>
+          <div class="section-title" style="margin-top:12px;">📘 Teori Singkat Kejuruan</div>
           <div class="mission-theory-box" id="mission-theory">
             Materi kejuruan akan dimuat di sini...
           </div>
@@ -138,7 +154,7 @@
 
       <!-- WIRE COLOR SELECTOR (PUIL 2011) -->
       <div class="sidebar-section">
-        <div class="section-title">🎨 Warna Kabel Standar PUIL 2011</div>
+        <div class="section-title">🎨 Standar Warna Kabel PUIL 2011</div>
         <div class="puil-colors">
           <div class="wire-color-swatch active" style="background:#8B4513;" data-color="#8B4513" title="Fasa 1 / Fasa R (Coklat)">L1</div>
           <div class="wire-color-swatch" style="background:#111827; border: 1px solid #475569;" data-color="#111827" title="Fasa S (Hitam)">L2</div>
@@ -148,7 +164,7 @@
           <div class="wire-color-swatch" style="background:#ef4444;" data-color="#ef4444" title="DC Positif (Merah)">+</div>
         </div>
         <p style="font-size:0.72rem; color:#94a3b8; margin-top:8px;">
-          <em>Klik terminal pin untuk mulai menyambung kabel, lalu klik pin tujuan. Klik kabel untuk menghapusnya.</em>
+          <em>Klik terminal pin untuk menyambung kabel. Klik kabel untuk menghapusnya.</em>
         </p>
       </div>
 
@@ -162,8 +178,8 @@
             <button class="btn btn-outline btn-sm" style="flex:1;" onclick="app.undoWire()">
               ↩ Undo Kabel
             </button>
-            <button class="btn btn-danger btn-sm" onclick="app.clearWorkbench()">
-              🗑️ Reset
+            <button class="btn btn-danger btn-sm" onclick="app.resetCurrentLevel()" title="Kembalikan posisi awal level">
+              🔄 Reset Level
             </button>
           </div>
         </div>
@@ -174,16 +190,27 @@
     <!-- RIGHT WORKBENCH: SVG Circuit Panel -->
     <div class="workbench-container" id="workbench-container">
       
-      <!-- TOP STATUS BAR -->
+      <!-- TOP STATUS BAR & QUICK TOOLBAR -->
       <div class="workbench-statusbar">
         <div class="status-left">
           <div class="short-circuit-banner" id="short-circuit-alert">
             💥 PERINGATAN K3: Hubung Singkat (Korsleting) Terdeteksi! MCB Telah Anjlok (Trip)!
           </div>
+          <div class="workbench-toolbar">
+            <button class="btn btn-sm btn-outline" onclick="app.showSchematicModal()" title="Buka Skema Rangkaian">
+              📐 Skema
+            </button>
+            <button class="btn btn-sm btn-outline" onclick="app.resetCurrentLevel()" title="Ulangi Level Ini">
+              🔄 Ulangi
+            </button>
+            <button class="btn btn-sm btn-outline" onclick="app.multimeter.resetProbes()" title="Reset Posisi Probe">
+              📍 Reset Probe
+            </button>
+          </div>
         </div>
         <div class="status-right">
-          <span style="font-size:0.75rem; color:#64748b; background:rgba(15,23,42,0.8); padding:4px 8px; border-radius:4px;">
-            Tarik Probe Merah & Hitam ke Terminal untuk Mengukur Nilai Listrik
+          <span style="font-size:0.74rem; color:#94a3b8; background:rgba(15,23,42,0.85); padding:5px 10px; border-radius:6px; border:1px solid #1e293b;">
+            💡 Tarik Probe Merah & Hitam ke Terminal untuk Mengukur Tegangan / Kontinuitas
           </span>
         </div>
       </div>
@@ -202,6 +229,68 @@
       <div class="modal-actions">
         <button class="btn btn-outline" onclick="app.closeModal()">Tutup</button>
         <button class="btn btn-success" id="modal-next-btn" onclick="app.nextLevel()">Lanjut Level Berikutnya ➡️</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCHEMATIC BLUEPRINT MODAL -->
+  <div class="modal-overlay" id="schematic-modal">
+    <div class="modal-content" style="max-width: 600px;">
+      <h3 class="modal-title" id="schematic-title">📐 Skema Rangkaian</h3>
+      <div class="modal-message" id="schematic-desc" style="font-size:0.84rem; margin-bottom:12px;"></div>
+      <div id="schematic-body" style="background:#090e19; border:1px solid #1e293b; border-radius:8px; padding:12px; display:flex; justify-content:center;">
+        <!-- Injected SVG -->
+      </div>
+      <div class="modal-actions" style="margin-top:16px;">
+        <button class="btn btn-primary" onclick="app.closeSchematicModal()">Paham, Kembali Merakit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ONBOARDING TUTORIAL MODAL -->
+  <div class="modal-overlay" id="onboarding-modal">
+    <div class="modal-content" style="max-width: 640px;">
+      <h3 class="modal-title">⚡ Selamat Datang di VoltMaster SMK!</h3>
+      <p style="font-size:0.84rem; color:#94a3b8;">
+        Simulator instalasi kelistrikan interaktif ini dirancang untuk melatih keterampilan praktik siswa SMK Kelas 10 secara aman dan mandiri.
+      </p>
+
+      <div class="onboarding-grid">
+        <div class="onboarding-card">
+          <div class="onboarding-card-num">1</div>
+          <div class="onboarding-card-title">Pilih Warna Kabel (PUIL)</div>
+          <div class="onboarding-card-desc">
+            Gunakan warna Coklat untuk Fasa (L), Biru untuk Netral (N), dan Kuning-Hijau untuk Arde (PE).
+          </div>
+        </div>
+
+        <div class="onboarding-card">
+          <div class="onboarding-card-num">2</div>
+          <div class="onboarding-card-title">Hubungkan Kabel</div>
+          <div class="onboarding-card-desc">
+            Klik bulatan terminal pin pertama, lalu klik terminal pin kedua. Klik kabel untuk menghapusnya.
+          </div>
+        </div>
+
+        <div class="onboarding-card">
+          <div class="onboarding-card-num">3</div>
+          <div class="onboarding-card-title">Ukur dengan Multimeter</div>
+          <div class="onboarding-card-desc">
+            Tarik probe merah & hitam ke terminal yang ingin diukur. Putar knop skala (ACV/DCV/Buzzer).
+          </div>
+        </div>
+
+        <div class="onboarding-card">
+          <div class="onboarding-card-num">4</div>
+          <div class="onboarding-card-title">Uji & Raih Bintang!</div>
+          <div class="onboarding-card-desc">
+            Nyalakan MCB & sakelar, lalu klik tombol "Uji & Periksa Rangkaian" untuk mendapatkan XP.
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-success" onclick="app.closeOnboardingModal()">Mulai Belajar Sekarang 🚀</button>
       </div>
     </div>
   </div>

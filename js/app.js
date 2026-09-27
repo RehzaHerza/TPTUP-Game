@@ -1,6 +1,7 @@
 /**
  * Main Application Controller for VoltMaster SMK
- * Connects SVG canvas, circuit engine, multimeter HUD, wire routing, and user interface.
+ * Enhanced with Live Checklist tracking, Schematic Blueprint viewer,
+ * Interactive Onboarding, Terminal Tooltips, and Animated Current Flow.
  */
 
 class VoltMasterApp {
@@ -38,7 +39,8 @@ class VoltMasterApp {
     return {
       completedLevels: {},
       completedCases: {},
-      totalXP: 0
+      totalXP: 0,
+      hasSeenIntro: false
     };
   }
 
@@ -57,13 +59,18 @@ class VoltMasterApp {
     this.setupEventListeners();
     this.loadLevel(0);
     this.updateStatsUI();
+
+    // Show onboarding for first-time student
+    if (!this.progress.hasSeenIntro) {
+      setTimeout(() => this.showOnboardingModal(), 600);
+      this.progress.hasSeenIntro = true;
+      this.saveProgress();
+    }
   }
 
   setupEventListeners() {
-    // Window resize
     window.addEventListener('resize', () => this.render());
 
-    // Mouse & Touch events on SVG workbench
     const container = document.getElementById('workbench-container');
 
     const getSVGCoords = (e) => {
@@ -113,7 +120,6 @@ class VoltMasterApp {
         }
       }
 
-      // If drawing a wire, re-render to update dynamic wire path
       if (this.activeWireStart) {
         this.render();
       }
@@ -149,7 +155,7 @@ class VoltMasterApp {
       }
     });
 
-    // Touch support
+    // Touch support for drag
     container.addEventListener('touchmove', (e) => {
       if (this.draggingTarget || this.activeWireStart) {
         e.preventDefault();
@@ -173,11 +179,7 @@ class VoltMasterApp {
       }
     }, { passive: false });
 
-    container.addEventListener('touchend', () => {
-      this.draggingTarget = null;
-    });
-
-    // Color buttons
+    // PUIL color selector buttons
     document.querySelectorAll('.wire-color-swatch').forEach(el => {
       el.addEventListener('click', (e) => {
         document.querySelectorAll('.wire-color-swatch').forEach(s => s.classList.remove('active'));
@@ -201,7 +203,7 @@ class VoltMasterApp {
     }
 
     let closestPin = null;
-    let minDist = 26;
+    let minDist = 28;
 
     this.components.forEach(comp => {
       comp.pins.forEach(pin => {
@@ -225,14 +227,12 @@ class VoltMasterApp {
     this.multimeter.evaluate();
   }
 
-  // Switch between Misi, Troubleshooting, and Sandbox
   switchTab(tabName) {
     this.currentMode = tabName;
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
     const activeTab = document.getElementById(`tab-${tabName}`);
     if (activeTab) activeTab.classList.add('active');
 
-    // Toggle panels
     const missionPanel = document.getElementById('mission-info-panel');
     const sandboxPanel = document.getElementById('sandbox-tools-panel');
     const troublePanel = document.getElementById('troubleshoot-tools-panel');
@@ -254,7 +254,6 @@ class VoltMasterApp {
     this.currentLevelIdx = Math.max(0, Math.min(levelIdx, GAME_LEVELS.length - 1));
     const lvl = GAME_LEVELS[this.currentLevelIdx];
 
-    // Populate level info UI
     const titleEl = document.getElementById('mission-title');
     const objEl = document.getElementById('mission-objective');
     const theoryEl = document.getElementById('mission-theory');
@@ -265,13 +264,17 @@ class VoltMasterApp {
     if (theoryEl) theoryEl.innerHTML = lvl.theory;
     if (badgeEl) badgeEl.innerText = `${lvl.category} • ${lvl.difficulty}`;
 
-    // Enable/disable tespen tool based on level
     this.multimeter.isTespenActive = lvl.toolsNeeded.includes('tespen') || true;
 
-    // Instantiate components
     this.components = lvl.components.map(c => createComponent(c.type, c.x, c.y, c.options || {}));
     this.wires = (lvl.initialWires || []).map(w => ({ ...w }));
     this.activeWireStart = null;
+
+    // Update level button active classes
+    document.querySelectorAll('.btn-lvl').forEach((btn, idx) => {
+      btn.classList.toggle('active', idx === this.currentLevelIdx);
+      btn.classList.toggle('completed', !!this.progress.completedLevels[idx + 1]);
+    });
 
     this.recalculate();
     this.render();
@@ -305,7 +308,6 @@ class VoltMasterApp {
     this.render();
   }
 
-  // Add component in sandbox
   addSandboxComponent(type) {
     const newComp = createComponent(type, 180 + Math.random() * 80, 150 + Math.random() * 60);
     if (newComp) {
@@ -325,6 +327,14 @@ class VoltMasterApp {
     }
   }
 
+  resetCurrentLevel() {
+    if (this.currentMode === 'misi') {
+      this.loadLevel(this.currentLevelIdx);
+    } else if (this.currentMode === 'troubleshoot') {
+      this.loadTroubleshootCase(this.currentCaseIdx);
+    }
+  }
+
   undoWire() {
     if (this.wires.length > 0) {
       this.wires.pop();
@@ -333,17 +343,13 @@ class VoltMasterApp {
     }
   }
 
-  // Handle pin terminal clicking for wire connections
   onPinClick(pinId) {
     if (!this.activeWireStart) {
-      // Start drawing wire from this pin
       this.activeWireStart = pinId;
       if (window.sound) window.sound.playConnect();
       this.render();
     } else {
-      // Complete connection to another pin
       if (this.activeWireStart !== pinId) {
-        // Prevent duplicate wires
         const exists = this.wires.some(
           w => (w.from === this.activeWireStart && w.to === pinId) ||
                (w.from === pinId && w.to === this.activeWireStart)
@@ -448,6 +454,55 @@ class VoltMasterApp {
     this.engine.setCircuit(this.components, this.wires);
     this.multimeter.evaluate();
     this.checkShortCircuitBanner();
+    this.updateChecklistUI();
+  }
+
+  // Evaluates live checklist and renders the step progress
+  updateChecklistUI() {
+    const container = document.getElementById('live-checklist-container');
+    if (!container) return;
+
+    if (this.currentMode !== 'misi') {
+      container.style.display = 'none';
+      return;
+    }
+
+    const lvl = GAME_LEVELS[this.currentLevelIdx];
+    if (!lvl.checklist || lvl.checklist.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+
+    container.style.display = 'block';
+
+    let doneCount = 0;
+    let html = `
+      <div class="checklist-header">
+        <span>📋 LANGKAH KERJA PRAKTIK</span>
+        <span class="checklist-counter" id="chk-counter">0/${lvl.checklist.length}</span>
+      </div>
+      <div class="checklist-items">
+    `;
+
+    lvl.checklist.forEach(item => {
+      const isDone = item.check(this.engine, this.multimeter);
+      if (isDone) doneCount++;
+      const itemClass = isDone ? 'chk-item completed' : 'chk-item pending';
+      const checkIcon = isDone ? '✅' : '⚪';
+
+      html += `
+        <div class="${itemClass}">
+          <span class="chk-icon">${checkIcon}</span>
+          <span class="chk-text">${item.text}</span>
+        </div>
+      `;
+    });
+
+    html += `</div>`;
+    container.innerHTML = html;
+
+    const counterEl = document.getElementById('chk-counter');
+    if (counterEl) counterEl.innerText = `${doneCount}/${lvl.checklist.length}`;
   }
 
   checkShortCircuitBanner() {
@@ -457,7 +512,6 @@ class VoltMasterApp {
     }
   }
 
-  // Verify Current Mission or Troubleshooting Case
   verifyCircuit() {
     let result = { passed: false, feedback: "" };
 
@@ -527,6 +581,46 @@ class VoltMasterApp {
     if (modal) modal.classList.remove('open');
   }
 
+  // Opens schematic blueprint viewer
+  showSchematicModal() {
+    const modal = document.getElementById('schematic-modal');
+    const titleEl = document.getElementById('schematic-title');
+    const descEl = document.getElementById('schematic-desc');
+    const bodyEl = document.getElementById('schematic-body');
+
+    const lvl = GAME_LEVELS[this.currentLevelIdx];
+    if (lvl && lvl.schematic) {
+      if (titleEl) titleEl.innerText = `📐 Skema Rangkaian: ${lvl.title}`;
+      if (descEl) descEl.innerHTML = lvl.schematic.desc;
+      if (bodyEl) bodyEl.innerHTML = lvl.schematic.svg;
+    }
+    if (modal) modal.classList.add('open');
+  }
+
+  closeSchematicModal() {
+    const modal = document.getElementById('schematic-modal');
+    if (modal) modal.classList.remove('open');
+  }
+
+  // Onboarding Tutorial Modal
+  showOnboardingModal() {
+    const modal = document.getElementById('onboarding-modal');
+    if (modal) modal.classList.add('open');
+  }
+
+  closeOnboardingModal() {
+    const modal = document.getElementById('onboarding-modal');
+    if (modal) modal.classList.remove('open');
+  }
+
+  toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => console.warn(err));
+    } else {
+      document.exitFullscreen().catch(err => console.warn(err));
+    }
+  }
+
   updateStatsUI() {
     const xpEl = document.getElementById('total-xp');
     const completedLvlCount = Object.keys(this.progress.completedLevels).length;
@@ -551,8 +645,8 @@ class VoltMasterApp {
     // 1. Grid Background
     svgHtml += `
       <defs>
-        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-          <circle cx="2" cy="2" r="1" fill="#334155" opacity="0.6"/>
+        <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
+          <circle cx="2" cy="2" r="1.2" fill="#334155" opacity="0.65"/>
         </pattern>
       </defs>
       <rect width="100%" height="100%" fill="url(#grid)" />
@@ -577,14 +671,23 @@ class VoltMasterApp {
 
         const pathData = `M ${p1.x} ${p1.y} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
 
+        // Check if wire carries active current (animated dashes)
+        const potFrom = this.engine.getPinPotential(wire.from);
+        const potTo = this.engine.getPinPotential(wire.to);
+        const isCurrentFlowing = (potFrom.type === 'AC' && potFrom.v >= 100) || (potTo.type === 'AC' && potTo.v >= 100);
+
         svgHtml += `
-          <g class="wire-group" onclick="app.deleteWire(${idx})" style="cursor:pointer;">
+          <g class="wire-group" onclick="app.deleteWire(${idx})" style="cursor:pointer;" title="Klik untuk menghapus kabel">
             <!-- Fat invisible stroke for easy clicking -->
-            <path d="${pathData}" fill="none" stroke="transparent" stroke-width="14"/>
+            <path d="${pathData}" fill="none" stroke="transparent" stroke-width="16"/>
             <!-- Outline shadow -->
-            <path d="${pathData}" fill="none" stroke="#000" stroke-width="6" opacity="0.4"/>
+            <path d="${pathData}" fill="none" stroke="#000" stroke-width="7" opacity="0.45"/>
             <!-- Main Wire -->
-            <path d="${pathData}" fill="none" stroke="${wire.color || '#8B4513'}" stroke-width="4" stroke-linecap="round"/>
+            <path d="${pathData}" fill="none" stroke="${wire.color || '#8B4513'}" stroke-width="4.5" stroke-linecap="round"/>
+            ${isCurrentFlowing ? `
+              <!-- Animated current flow particle dash -->
+              <path d="${pathData}" fill="none" stroke="#ffffff" stroke-width="2" stroke-dasharray="5,12" stroke-linecap="round" class="wire-current-anim"/>
+            ` : ''}
           </g>
         `;
       }
@@ -613,7 +716,9 @@ class VoltMasterApp {
         const pathData = `M ${p1.x} ${p1.y} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
 
         svgHtml += `
-          <path d="${pathData}" fill="none" stroke="${this.selectedWireColor}" stroke-width="3" stroke-dasharray="6,4" stroke-linecap="round"/>
+          <!-- Active wire halo pulse -->
+          <circle cx="${p1.x}" cy="${p1.y}" r="15" fill="none" stroke="${this.selectedWireColor}" stroke-width="2.5" class="rotor-spinning" stroke-dasharray="4,4"/>
+          <path d="${pathData}" fill="none" stroke="${this.selectedWireColor}" stroke-width="3.5" stroke-dasharray="6,4" stroke-linecap="round"/>
         `;
       }
     }
@@ -630,7 +735,7 @@ class VoltMasterApp {
 
     // Click empty SVG space to cancel active wire in progress
     this.svg.onmousedown = (e) => {
-      if (e.target === this.svg || e.target.tagName === 'rect' && e.target.getAttribute('fill') === 'url(#grid)') {
+      if (e.target === this.svg || (e.target.tagName === 'rect' && e.target.getAttribute('fill') === 'url(#grid)')) {
         if (this.activeWireStart) {
           this.activeWireStart = null;
           this.render();

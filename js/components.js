@@ -1059,11 +1059,18 @@ class Motor3P extends BaseComponent {
 // HELPER: Pin SVG DOM Renderer
 // -------------------------------------------------------------
 function renderPinDOM(pin, label) {
+  const pinTitle = label || pin.label;
   return `
-    <g class="pin-terminal" id="pin_${pin.id}" data-pin-id="${pin.id}" transform="translate(${pin.x}, ${pin.y})">
-      <circle cx="0" cy="0" r="7" fill="${pin.color || '#f59e0b'}" stroke="#ffffff" stroke-width="2" class="pin-hitbox"/>
-      <circle cx="0" cy="0" r="2.5" fill="#1e293b"/>
-      <text x="0" y="-10" text-anchor="middle" fill="#cbd5e1" font-size="8" font-weight="bold" pointer-events="none">${label || pin.label}</text>
+    <g class="pin-terminal" id="pin_${pin.id}" data-pin-id="${pin.id}" transform="translate(${pin.x}, ${pin.y})" style="cursor:crosshair;">
+      <title>Terminal: ${pinTitle}</title>
+      <!-- Large invisible circle for comfortable clicking on mouse & touch -->
+      <circle cx="0" cy="0" r="16" fill="transparent" class="pin-touch-target"/>
+      <!-- Visible pin terminal -->
+      <circle cx="0" cy="0" r="8" fill="${pin.color || '#f59e0b'}" stroke="#ffffff" stroke-width="2.5" class="pin-hitbox"/>
+      <circle cx="0" cy="0" r="3" fill="#0f172a"/>
+      <text x="0" y="-12" text-anchor="middle" fill="#f1f5f9" font-size="8.5" font-weight="800" pointer-events="none" filter="drop-shadow(0 1px 2px #000)">
+        ${pinTitle}
+      </text>
     </g>
   `;
 }
