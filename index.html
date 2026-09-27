@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VoltMaster SMK - Simulator Instalasi & Pengukuran Listrik</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+</head>
+<body>
+
+  <!-- TOP NAVBAR -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="brand-icon">⚡</div>
+      <div>
+        <h1 class="brand-title">VoltMaster SMK</h1>
+        <div class="brand-sub">Simulator Instalasi & Pengukuran Listrik (PUIL 2011)</div>
+      </div>
+    </div>
+
+    <!-- Navigation Modes -->
+    <nav class="nav-tabs">
+      <button class="nav-tab active" id="tab-misi" onclick="app.switchTab('misi')">🎯 Misi Bertingkat (SMK 10)</button>
+      <button class="nav-tab" id="tab-troubleshoot" onclick="app.switchTab('troubleshoot')">🛠️ Troubleshooting (UKK)</button>
+      <button class="nav-tab" id="tab-sandbox" onclick="app.switchTab('sandbox')">🧪 Meja Kerja Bebas (Lab)</button>
+      <button class="nav-tab" id="tab-puil" onclick="togglePUILModal(true)">📖 Standar PUIL & K3</button>
+    </nav>
+
+    <!-- Student Stats & Sound Toggle -->
+    <div class="user-stats">
+      <div class="stat-pill stat-pill-xp">
+        <span>⭐</span>
+        <span id="total-xp">0 XP</span>
+      </div>
+      <div class="stat-pill stat-pill-progress">
+        <span>🎓</span>
+        <span id="overall-progress">0% Selesai</span>
+      </div>
+      <button class="btn btn-sm btn-outline" id="sound-btn" onclick="toggleAudio()" title="Suara ON/OFF">
+        🔊 Suara
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE -->
+  <main class="main-wrapper">
+    
+    <!-- LEFT SIDEBAR: Instructions & Component Selector -->
+    <aside class="sidebar">
+      
+      <!-- 1. MISI PANEL (Active in 'misi' mode) -->
+      <div id="mission-info-panel">
+        <div class="sidebar-section">
+          <span class="mission-badge" id="mission-badge">Dasar & K3 • Mudah</span>
+          <h2 class="mission-title" id="mission-title">Level 1: K3 Listrik & Penggunaan Tespen</h2>
+          <div class="mission-objective" id="mission-objective">
+            Tugas akan dimuat di sini...
+          </div>
+          
+          <div class="section-title">📘 Teori Singkat Kejuruan</div>
+          <div class="mission-theory-box" id="mission-theory">
+            Materi kejuruan akan dimuat di sini...
+          </div>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="section-title">Pilih Level Pelatihan</div>
+          <div class="level-navigation">
+            <button class="btn-lvl" onclick="app.loadLevel(0)">Lvl 1</button>
+            <button class="btn-lvl" onclick="app.loadLevel(1)">Lvl 2</button>
+            <button class="btn-lvl" onclick="app.loadLevel(2)">Lvl 3</button>
+            <button class="btn-lvl" onclick="app.loadLevel(3)">Lvl 4</button>
+            <button class="btn-lvl" onclick="app.loadLevel(4)">Lvl 5</button>
+            <button class="btn-lvl" onclick="app.loadLevel(5)">Lvl 6</button>
+            <button class="btn-lvl" onclick="app.loadLevel(6)">Lvl 7</button>
+            <button class="btn-lvl" onclick="app.loadLevel(7)">Lvl 8</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. TROUBLESHOOTING PANEL (Active in 'troubleshoot' mode) -->
+      <div id="troubleshoot-tools-panel" style="display:none;">
+        <div class="sidebar-section">
+          <span class="mission-badge" style="border-color:#f59e0b; color:#f59e0b;">Uji Kompetensi Kejuruan (UKK)</span>
+          <h2 class="mission-title" id="trouble-title">Kasus 1</h2>
+          <div class="mission-objective" id="trouble-scenario">Skenario kerusakan...</div>
+          
+          <div class="section-title">💡 Petunjuk Diagnosa</div>
+          <div class="mission-theory-box" id="trouble-hint">Petunjuk...</div>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="section-title">Pilih Kasus Gangguan</div>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            <button class="btn btn-outline btn-sm" onclick="app.loadTroubleshootCase(0)">Kasus 1: Lampu Putus Jalur</button>
+            <button class="btn btn-outline btn-sm" onclick="app.loadTroubleshootCase(1)">Kasus 2: MCB Trip / Korslet</button>
+            <button class="btn btn-outline btn-sm" onclick="app.loadTroubleshootCase(2)">Kasus 3: Bodi Nyengat (Grounding)</button>
+            <button class="btn btn-outline btn-sm" onclick="app.loadTroubleshootCase(3)">Kasus 4: Motor 3 Fasa Hilang Fasa</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. SANDBOX TOOLS PANEL (Active in 'sandbox' mode) -->
+      <div id="sandbox-tools-panel" style="display:none;">
+        <div class="sidebar-section">
+          <div class="section-title">📦 Template Rangkaian Siap Uji</div>
+          <select class="dmm-select" onchange="app.sandbox.loadTemplate(this.value)">
+            <option value="simple_lamp">1. Lampu & Sakelar Tunggal</option>
+            <option value="double_lamp">2. Sakelar Ganda (2 Lampu)</option>
+            <option value="outlet_grounding">3. Stop Kontak + Grounding</option>
+            <option value="kwh_app">4. APP PLN & KWH Meter</option>
+            <option value="motor_3phase">5. Penggerak Motor 3 Fasa</option>
+          </select>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="section-title">➕ Tambah Komponen ke Meja</div>
+          <div class="toolbox-grid">
+            <div class="toolbox-card" onclick="app.addSandboxComponent('pln1p')">PLN 1P (220V)</div>
+            <div class="toolbox-card" onclick="app.addSandboxComponent('pln3p')">PLN 3P (380V)</div>
+            <div class="toolbox-card" onclick="app.addSandboxComponent('battery')">Baterai DC 12V</div>
+            <div class="toolbox-card" onclick="app.addSandboxComponent('mcb1p')">MCB 1-Fasa</div>
+            <div class="toolbox-card" onclick="app.addSandboxComponent('mcb3p')">MCB 3-Fasa</div>
+            <div class="toolbox-card" onclick="app.addSandboxComponent('switch_single')">Sakelar Tunggal</div>
+            <div class="toolbox-card" onclick="app.addSandboxComponent('switch_double')">Sakelar Ganda</div>
+            <div class="toolbox-card" onclick="app.addSandboxComponent('switch_hotel')">Sakelar Tukar</div>
+            <div class="toolbox-card" onclick="app.addSandboxComponent('bulb')">Lampu Bohlam</div>
+            <div class="toolbox-card" onclick="app.addSandboxComponent('outlet')">Stop Kontak</div>
+            <div class="toolbox-card" onclick="app.addSandboxComponent('kwh_meter')">KWH Meter PLN</div>
+            <div class="toolbox-card" onclick="app.addSandboxComponent('ground_rod')">Batang Arde (PE)</div>
+            <div class="toolbox-card" onclick="app.addSandboxComponent('contactor')">Kontaktor (KM1)</div>
+            <div class="toolbox-card" onclick="app.addSandboxComponent('push_button')">Push Button NO</div>
+            <div class="toolbox-card" onclick="app.addSandboxComponent('motor3p')">Motor 3-Fasa</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WIRE COLOR SELECTOR (PUIL 2011) -->
+      <div class="sidebar-section">
+        <div class="section-title">🎨 Warna Kabel Standar PUIL 2011</div>
+        <div class="puil-colors">
+          <div class="wire-color-swatch active" style="background:#8B4513;" data-color="#8B4513" title="Fasa 1 / Fasa R (Coklat)">L1</div>
+          <div class="wire-color-swatch" style="background:#111827; border: 1px solid #475569;" data-color="#111827" title="Fasa S (Hitam)">L2</div>
+          <div class="wire-color-swatch" style="background:#6B7280;" data-color="#6B7280" title="Fasa T (Abu-abu)">L3</div>
+          <div class="wire-color-swatch" style="background:#2563EB;" data-color="#2563EB" title="Netral N (Biru)">N</div>
+          <div class="wire-color-swatch" style="background: repeating-linear-gradient(45deg, #16A34A, #16A34A 5px, #facc15 5px, #facc15 10px);" data-color="#16A34A" title="Pembumian / Arde (Kuning-Hijau)">PE</div>
+          <div class="wire-color-swatch" style="background:#ef4444;" data-color="#ef4444" title="DC Positif (Merah)">+</div>
+        </div>
+        <p style="font-size:0.72rem; color:#94a3b8; margin-top:8px;">
+          <em>Klik terminal pin untuk mulai menyambung kabel, lalu klik pin tujuan. Klik kabel untuk menghapusnya.</em>
+        </p>
+      </div>
+
+      <!-- CONTROL BUTTONS -->
+      <div class="sidebar-section" style="margin-top:auto;">
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <button class="btn btn-success" onclick="app.verifyCircuit()">
+            ⚡ Uji & Periksa Rangkaian
+          </button>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-outline btn-sm" style="flex:1;" onclick="app.undoWire()">
+              ↩ Undo Kabel
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="app.clearWorkbench()">
+              🗑️ Reset
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- RIGHT WORKBENCH: SVG Circuit Panel -->
+    <div class="workbench-container" id="workbench-container">
+      
+      <!-- TOP STATUS BAR -->
+      <div class="workbench-statusbar">
+        <div class="status-left">
+          <div class="short-circuit-banner" id="short-circuit-alert">
+            💥 PERINGATAN K3: Hubung Singkat (Korsleting) Terdeteksi! MCB Telah Anjlok (Trip)!
+          </div>
+        </div>
+        <div class="status-right">
+          <span style="font-size:0.75rem; color:#64748b; background:rgba(15,23,42,0.8); padding:4px 8px; border-radius:4px;">
+            Tarik Probe Merah & Hitam ke Terminal untuk Mengukur Nilai Listrik
+          </span>
+        </div>
+      </div>
+
+      <!-- MAIN INTERACTIVE SVG -->
+      <svg id="workbench-svg"></svg>
+    </div>
+
+  </main>
+
+  <!-- FEEDBACK & RESULT MODAL -->
+  <div class="modal-overlay" id="feedback-modal">
+    <div class="modal-content">
+      <h3 class="modal-title" id="modal-title">Hasil Pemeriksaan Rangkaian</h3>
+      <div class="modal-message" id="modal-message">Keterangan...</div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="app.closeModal()">Tutup</button>
+        <button class="btn btn-success" id="modal-next-btn" onclick="app.nextLevel()">Lanjut Level Berikutnya ➡️</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PUIL & K3 REFERENCE MODAL -->
+  <div class="modal-overlay" id="puil-modal">
+    <div class="modal-content" style="max-width: 620px;">
+      <h3 class="modal-title">📖 Buku Saku Standar PUIL 2011 & K3 SMK</h3>
+      <div class="modal-message" style="max-height: 380px; overflow-y: auto;">
+        <h4 style="color:#38bdf8; margin-bottom:6px;">1. Standar Kode Warna Kabel (PUIL 2011 / SNI):</h4>
+        <ul style="margin-left: 20px; font-size:0.85rem; line-height: 1.6;">
+          <li><strong>Fasa 1 / Fasa R (L1):</strong> Coklat</li>
+          <li><strong>Fasa S (L2):</strong> Hitam</li>
+          <li><strong>Fasa T (L3):</strong> Abu-abu</li>
+          <li><strong>Kawat Netral (N):</strong> Biru</li>
+          <li><strong>Kawat Pembumian / Arde (PE):</strong> Loreng Kuning-Hijau</li>
+        </ul>
+
+        <h4 style="color:#38bdf8; margin-top:14px; margin-bottom:6px;">2. Aturan Keselamatan Kerja Listrik (K3):</h4>
+        <ul style="margin-left: 20px; font-size:0.85rem; line-height: 1.6;">
+          <li><strong>Tespen:</strong> Selalu gunakan tespen sebelum menyentuh konduktor telanjang untuk memastikan ketiadaan tegangan fasa hidup.</li>
+          <li><strong>Tegangan Sentuh Aman:</strong> PUIL menetapkan tegangan sentuh aman maksimal adalah <strong>50 Volt AC</strong> pada kondisi ruangan normal.</li>
+          <li><strong>Nilai Tahanan Pembumian:</strong> Tahanan elektroda pembumian (Ground Rod) instalasi konsumen maksimal <strong>5 Ohm (&le; 5 &Omega;)</strong>.</li>
+          <li><strong>Penempatan Sakelar:</strong> Sakelar wajib dipasang pada kawat <strong>FASA</strong>, bukan pada kawat Netral, agar saat sakelar OFF fitting lampu benar-benar bebas dari tegangan.</li>
+        </ul>
+
+        <h4 style="color:#38bdf8; margin-top:14px; margin-bottom:6px;">3. Hubungan Tegangan 3-Fasa:</h4>
+        <p style="font-size:0.85rem; line-height: 1.6;">
+          Tegangan Fasa-Fasa: <code>V<sub>L-L</sub> = &radic;3 &times; V<sub>L-N</sub> = 1.732 &times; 220V &asymp; 380V AC</code>.<br>
+          Digunakan pada panel distribusi tenaga dan penggerak motor induksi industri.
+        </p>
+      </div>
+      <div class="modal-actions" style="margin-top:14px;">
+        <button class="btn btn-outline" onclick="togglePUILModal(false)">Kembali ke Praktik</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- APPLICATION SCRIPTS -->
+  <script src="js/audio.js"></script>
+  <script src="js/circuit-engine.js"></script>
+  <script src="js/components.js"></script>
+  <script src="js/multimeter.js"></script>
+  <script src="js/levels.js"></script>
+  <script src="js/troubleshooting.js"></script>
+  <script src="js/sandbox.js"></script>
+  <script src="js/app.js"></script>
+
+  <script>
+    function togglePUILModal(open) {
+      const modal = document.getElementById('puil-modal');
+      if (modal) {
+        if (open) modal.classList.add('open');
+        else modal.classList.remove('open');
+      }
+    }
+
+    function toggleAudio() {
+      if (window.sound) {
+        const isMuted = window.sound.toggleMute();
+        const btn = document.getElementById('sound-btn');
+        if (btn) btn.innerText = isMuted ? '🔇 Bisu' : '🔊 Suara';
+      }
+    }
+  </script>
+
+</body>
+</html>
