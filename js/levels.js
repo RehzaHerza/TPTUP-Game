@@ -810,7 +810,7 @@ const GAME_LEVELS = [
       if (motor && motor.state.isRunning) {
         return {
           passed: true,
-          feedback: `SELAMAT! Motor Induksi 3 Fasa berhasil berputar sempurna (${motor.state.rpm} RPM). Anda telah menyelesaikan seluruh tingkatan kejuruan listrik SMK!`
+          feedback: `Bagus sekali! Rangkaian daya motor 3-fasa DOL berhasil berputar 1440 RPM!`
         };
       }
 
@@ -826,7 +826,760 @@ const GAME_LEVELS = [
         feedback: "Sambungkan: Suplai R-S-T -> MCB 3P In. MCB 3P Out -> Kontaktor L1-L2-L3. Kontaktor T1-T2-T3 -> Motor U1-V1-W1. Naikkan tuas MCB 3P!"
       };
     }
+  },
+
+  // -----------------------------------------------------------------
+  // LEVEL 9: Instalasi Gabungan Sakelar Tunggal + Lampu + Stop Kontak
+  // -----------------------------------------------------------------
+  {
+    id: 9,
+    title: "Level 9: Instalasi Gabungan (Sakelar, Lampu & Stop Kontak)",
+    category: "Instalasi Domestik",
+    difficulty: "Menengah",
+    theory: `
+      <strong>Instalasi Kotak Kontak & Sakelar Berdampingan (PUIL 2011):</strong><br>
+      • Kawat Fasa dari MCB dicabangkan ke terminal masuk sakelar dan lubang Fasa stop kontak.<br>
+      • Stop kontak WAJIB dilengkapi kawat pembumian (PE) berisolasi kuning-hijau yang tersambung ke elektroda bumi.<br>
+      • Kawat Netral (Biru) dikopel untuk melayani beban lampu dan stop kontak.
+    `,
+    objective: "Rakit instalasi terpadu: 1 MCB 1P mengamankan 1 Sakelar Tunggal + Lampu dan 1 Stop Kontak 2P+PE. Pastikan lampu menyala dan stop kontak berdaya dengan grounding aman!",
+    components: [
+      { type: 'pln1p', x: 40, y: 150 },
+      { type: 'mcb1p', x: 190, y: 140, options: { rating: 'C6' } },
+      { type: 'switch_single', x: 300, y: 160 },
+      { type: 'bulb', x: 440, y: 90 },
+      { type: 'outlet', x: 440, y: 220 },
+      { type: 'ground_rod', x: 600, y: 220 }
+    ],
+    initialWires: [],
+    toolsNeeded: ['wires'],
+    checklist: [
+      {
+        id: 'chk_9_1',
+        text: 'PLN L ke MCB IN & MCB OUT ke Sakelar IN + Stop Kontak L',
+        check: (engine) => {
+          const sw = engine.components.find(c => c.type === 'switch_single');
+          const ot = engine.components.find(c => c.type === 'outlet');
+          if (!sw || !ot) return false;
+          const pSw = engine.getPinPotential(`${sw.id}_in`);
+          const pOt = engine.getPinPotential(`${ot.id}_L`);
+          return pSw.v >= 180 && pOt.v >= 180;
+        }
+      },
+      {
+        id: 'chk_9_2',
+        text: 'Netral PLN ke Netral Lampu dan Netral Stop Kontak',
+        check: (engine) => {
+          const b = engine.components.find(c => c.type === 'bulb');
+          const ot = engine.components.find(c => c.type === 'outlet');
+          if (!b || !ot) return false;
+          const pB = engine.getPinPotential(`${b.id}_neutral`);
+          const pOt = engine.getPinPotential(`${ot.id}_N`);
+          return pB.isNeutral && pOt.isNeutral;
+        }
+      },
+      {
+        id: 'chk_9_3',
+        text: 'Terminal Arde Stop Kontak (PE) ke Batang Pembumian (Ground Rod)',
+        check: (engine) => {
+          const ot = engine.components.find(c => c.type === 'outlet');
+          return !!(ot && engine.getPinPotential(`${ot.id}_PE`).isGround);
+        }
+      },
+      {
+        id: 'chk_9_4',
+        text: 'Naikkan MCB dan Tekan Sakelar (Lampu Nyala & Stop Kontak Aktif)',
+        check: (engine) => {
+          const b = engine.components.find(c => c.type === 'bulb');
+          const ot = engine.components.find(c => c.type === 'outlet');
+          return !!(b && b.state.isLit && ot && ot.state.isPowered);
+        }
+      }
+    ],
+    schematic: {
+      title: "Skema Instalasi Gabungan Sakelar & Stop Kontak",
+      desc: "Kawat Fasa melalui MCB dicabangkan ke Sakelar dan Stop Kontak. Kawat Netral melayani keduanya, dan kawat Pembumian PE khusus dihubungkan ke pelat arde Stop Kontak.",
+      svg: `
+        <svg viewBox="0 0 500 180" width="100%" height="160">
+          <rect width="100%" height="100%" fill="#090e17" rx="6"/>
+          <text x="250" y="24" fill="#38bdf8" font-size="12" font-weight="bold" text-anchor="middle">SKEMA GABUNGAN SAKELAR + STOP KONTAK</text>
+          <line x1="40" y1="50" x2="110" y2="50" stroke="#8B4513" stroke-width="2.5"/>
+          <rect x="110" y="40" width="30" height="20" fill="#1e293b" stroke="#f59e0b"/>
+          <line x1="140" y1="50" x2="220" y2="50" stroke="#8B4513" stroke-width="2.5"/>
+          <!-- Branch to Switch & Outlet -->
+          <circle cx="220" cy="50" r="3" fill="#8B4513"/>
+          <line x1="220" y1="50" x2="300" y2="50" stroke="#8B4513" stroke-width="2"/>
+          <line x1="220" y1="50" x2="220" y2="120" stroke="#8B4513" stroke-width="2"/>
+          <line x1="220" y1="120" x2="300" y2="120" stroke="#8B4513" stroke-width="2"/>
+          <!-- Switch & Lamp -->
+          <rect x="300" y="42" width="30" height="16" fill="#1e293b" stroke="#38bdf8"/>
+          <line x1="330" y1="50" x2="390" y2="50" stroke="#f59e0b" stroke-width="2"/>
+          <circle cx="405" cy="50" r="14" fill="#1e293b" stroke="#facc15" stroke-width="2"/>
+          <!-- Outlet -->
+          <rect x="300" y="110" width="45" height="35" fill="#1e293b" stroke="#cbd5e1"/>
+          <!-- Ground line -->
+          <line x1="345" y1="135" x2="420" y2="135" stroke="#16a34a" stroke-width="2"/>
+          <text x="440" y="140" fill="#16a34a" font-size="9">Arde PE</text>
+        </svg>
+      `
+    },
+    checkCompletion: (engine) => {
+      const b = engine.components.find(c => c.type === 'bulb');
+      const ot = engine.components.find(c => c.type === 'outlet');
+      if (b && b.state.isLit && ot && ot.state.isPowered) {
+        return {
+          passed: true,
+          feedback: "Hebat! Instalasi gabungan penerangan dan kotak kontak tersambung rapi dengan pengamanan pembumian sesuai standar PUIL 2011!"
+        };
+      }
+      return {
+        passed: false,
+        feedback: "Pastikan kawat Fasa terhubung ke Sakelar dan Stop Kontak, kawat Netral terhubung ke Lampu dan Stop Kontak, serta kawat Arde terpasang ke Ground Rod."
+      };
+    }
+  },
+
+  // -----------------------------------------------------------------
+  // LEVEL 10: Rangkaian Sakelar Silang (Kendali 3 Lokasi)
+  // -----------------------------------------------------------------
+  {
+    id: 10,
+    title: "Level 10: Kendali 3 Lokasi (2 Sakelar Tukar + 1 Sakelar Silang)",
+    category: "Instalasi Penerangan",
+    difficulty: "Tantangan",
+    theory: `
+      <strong>Prinsip Sakelar Silang (Cross / Intermediate Switch):</strong><br>
+      • Untuk mengendalikan 1 lampu dari 3 tempat berbeda atau lebih, digunakan <strong>2 Sakelar Tukar</strong> di ujung awal dan ujung akhir, serta <strong>Sakelar Silang (4 Terminal)</strong> di tengah.<br>
+      • Sakelar Silang dapat membalikkan posisi hubungan antara kawat Jalur A dan Jalur B.
+    `,
+    objective: "Rakit kendali 1 lampu dari 3 tempat menggunakan Sakelar Tukar 1, Sakelar Silang, dan Sakelar Tukar 2.",
+    components: [
+      { type: 'pln1p', x: 40, y: 150 },
+      { type: 'mcb1p', x: 180, y: 140 },
+      { type: 'switch_hotel', x: 280, y: 160, options: { id: 'sw_tukar_1', name: 'Sakelar Ujung 1' } },
+      { type: 'switch_cross', x: 420, y: 140 },
+      { type: 'switch_hotel', x: 560, y: 160, options: { id: 'sw_tukar_2', name: 'Sakelar Ujung 2' } },
+      { type: 'bulb', x: 700, y: 150 }
+    ],
+    initialWires: [],
+    toolsNeeded: ['wires'],
+    checklist: [
+      {
+        id: 'chk_10_1',
+        text: 'Fasa MCB ke COM Sakelar Tukar 1',
+        check: (engine) => {
+          const sw1 = engine.components.find(c => c.id.includes('sw_tukar_1'));
+          return sw1 && engine.getPinPotential(`${sw1.id}_com`).v >= 180;
+        }
+      },
+      {
+        id: 'chk_10_2',
+        text: 'Output L1 & L2 Sakelar Tukar 1 ke Input 1 & 2 Sakelar Silang',
+        check: (engine) => {
+          const sc = engine.components.find(c => c.type === 'switch_cross');
+          return sc && engine.wires.some(w => w.to === `${sc.id}_1` || w.from === `${sc.id}_1`);
+        }
+      },
+      {
+        id: 'chk_10_3',
+        text: 'Output 3 & 4 Sakelar Silang ke L1 & L2 Sakelar Tukar 2',
+        check: (engine) => {
+          const sw2 = engine.components.find(c => c.id.includes('sw_tukar_2'));
+          return sw2 && engine.wires.some(w => w.to === `${sw2.id}_l1` || w.from === `${sw2.id}_l1`);
+        }
+      },
+      {
+        id: 'chk_10_4',
+        text: 'COM Sakelar Tukar 2 ke Lampu Fasa & Netral Lampu ke PLN N',
+        check: (engine) => {
+          const b = engine.components.find(c => c.type === 'bulb');
+          return b && b.state.isLit;
+        }
+      }
+    ],
+    schematic: {
+      title: "Skema Pengendalian Lampu dari 3 Tempat",
+      desc: "Fasa -> Sakelar Tukar 1 -> Sakelar Silang (Intermedier) -> Sakelar Tukar 2 -> Lampu -> Netral.",
+      svg: `
+        <svg viewBox="0 0 520 160" width="100%" height="160">
+          <rect width="100%" height="100%" fill="#090e17" rx="6"/>
+          <text x="260" y="22" fill="#38bdf8" font-size="11" font-weight="bold" text-anchor="middle">KENDALI LAMPU 3 LOKASI (PUIL)</text>
+          <!-- Switch 1 -->
+          <rect x="70" y="50" width="45" height="40" fill="#1e293b" stroke="#38bdf8"/>
+          <text x="92" y="74" fill="#fff" font-size="8" text-anchor="middle">TUKAR 1</text>
+          <!-- Cross Switch -->
+          <rect x="200" y="45" width="55" height="50" fill="#1e293b" stroke="#f59e0b"/>
+          <text x="227" y="74" fill="#facc15" font-size="8" text-anchor="middle">SILANG</text>
+          <!-- Switch 2 -->
+          <rect x="340" y="50" width="45" height="40" fill="#1e293b" stroke="#38bdf8"/>
+          <text x="362" y="74" fill="#fff" font-size="8" text-anchor="middle">TUKAR 2</text>
+          <!-- Lamp -->
+          <circle cx="450" cy="70" r="14" fill="#1e293b" stroke="#facc15" stroke-width="2"/>
+        </svg>
+      `
+    },
+    checkCompletion: (engine) => {
+      const b = engine.components.find(c => c.type === 'bulb');
+      if (b && b.state.isLit) {
+        return {
+          passed: true,
+          feedback: "Luar biasa! Rangkaian kendali lampu dari 3 tempat dengan sakelar silang berfungsi sempurna!"
+        };
+      }
+      return {
+        passed: false,
+        feedback: "Sambungkan: MCB Out -> COM Sakelar Tukar 1. L1 & L2 Tukar 1 -> Terminal 1 & 2 Sakelar Silang. Terminal 3 & 4 Sakelar Silang -> L1 & L2 Tukar 2. COM Tukar 2 -> Lampu Fasa. Netral Lampu -> PLN N."
+      };
+    }
+  },
+
+  // -----------------------------------------------------------------
+  // LEVEL 11: Pemasangan APP PLN (KWH Meter 1 Fasa + Pembatas Arde)
+  // -----------------------------------------------------------------
+  {
+    id: 11,
+    title: "Level 11: Pemasangan APP PLN (KWH Meter & Pembumian)",
+    category: "Distribusi PLN",
+    difficulty: "Tantangan",
+    theory: `
+      <strong>Struktur Alat Pengukur dan Pembatas (APP) PLN:</strong><br>
+      • Saluran Masuk Pelayanan (SMP) dari SUTR masuk ke terminal 1 (Fasa) & 3 (Netral) KWH Meter.<br>
+      • Dari terminal 2 (Fasa Keluar) menuju MCB pembatas PLN.<br>
+      • Terminal 4 (Netral Keluar) diteruskan ke instalasi rumah.<br>
+      • Terminal 5 (Pentanahan) dihubungkan ke Batang Elektroda Pembumian (Ground Rod) dengan syarat tahanan tanah R ≤ 5 Ohm sesuai PUIL.
+    `,
+    objective: "Pasang pengawatan KWH Meter PLN dari sumber SUTR, hubungkan MCB Pembatas, dan sambungkan sistem pembumian ke Batang Arde.",
+    components: [
+      { type: 'pln1p', x: 40, y: 150 },
+      { type: 'kwh_meter', x: 190, y: 130 },
+      { type: 'mcb1p', x: 420, y: 140, options: { rating: 'C2' } },
+      { type: 'ground_rod', x: 530, y: 150, options: { resistance: 2.8 } },
+      { type: 'bulb', x: 630, y: 150 }
+    ],
+    initialWires: [],
+    toolsNeeded: ['wires'],
+    checklist: [
+      {
+        id: 'chk_11_1',
+        text: 'Fasa SUTR ke Terminal 1 KWH & Netral SUTR ke Terminal 3 KWH',
+        check: (engine) => {
+          const k = engine.components.find(c => c.type === 'kwh_meter');
+          return k && engine.getPinPotential(`${k.id}_in_L`).v >= 180 && engine.getPinPotential(`${k.id}_in_N`).isNeutral;
+        }
+      },
+      {
+        id: 'chk_11_2',
+        text: 'Output Fasa KWH (2) ke Input MCB Pembatas',
+        check: (engine) => {
+          const m = engine.components.find(c => c.type === 'mcb1p');
+          return m && engine.getPinPotential(`${m.id}_in`).v >= 180;
+        }
+      },
+      {
+        id: 'chk_11_3',
+        text: 'Terminal Pentanahan KWH (5) ke Batang Arde (Ground Rod)',
+        check: (engine) => {
+          const k = engine.components.find(c => c.type === 'kwh_meter');
+          return k && engine.getPinPotential(`${k.id}_ground`).isGround;
+        }
+      },
+      {
+        id: 'chk_11_4',
+        text: 'MCB Output ke Fasa Beban & KWH Netral Out (4) ke Netral Beban',
+        check: (engine) => {
+          const b = engine.components.find(c => c.type === 'bulb');
+          const k = engine.components.find(c => c.type === 'kwh_meter');
+          return b && b.state.isLit && k && k.state.isSpinning;
+        }
+      }
+    ],
+    schematic: {
+      title: "Diagram Sambungan APP KWH Meter PLN",
+      desc: "Terminal 1: Fasa Masuk, Terminal 2: Fasa Keluar, Terminal 3: Netral Masuk, Terminal 4: Netral Keluar, Terminal 5: Pentanahan Bodi APP ke Ground Rod.",
+      svg: `
+        <svg viewBox="0 0 500 160" width="100%" height="160">
+          <rect width="100%" height="100%" fill="#090e17" rx="6"/>
+          <text x="250" y="24" fill="#38bdf8" font-size="12" font-weight="bold" text-anchor="middle">SKEMA SAMBUNGAN KWH METER PLN</text>
+          <rect x="180" y="45" width="140" height="90" fill="#1e293b" stroke="#38bdf8" rx="6"/>
+          <text x="250" y="65" fill="#facc15" font-size="10" font-weight="bold" text-anchor="middle">KWH METER 1-PHASE</text>
+          <text x="195" y="125" fill="#8B4513" font-size="9">1:L</text>
+          <text x="225" y="125" fill="#8B4513" font-size="9">2:L</text>
+          <text x="255" y="125" fill="#2563EB" font-size="9">3:N</text>
+          <text x="285" y="125" fill="#2563EB" font-size="9">4:N</text>
+          <text x="310" y="125" fill="#16a34a" font-size="9">5:PE</text>
+        </svg>
+      `
+    },
+    checkCompletion: (engine) => {
+      const kwh = engine.components.find(c => c.type === 'kwh_meter');
+      const bulb = engine.components.find(c => c.type === 'bulb');
+      if (kwh && kwh.state.isSpinning && bulb && bulb.state.isLit) {
+        return {
+          passed: true,
+          feedback: "Sempurna! KWH meter mencatat pemakaian listrik dan sistem pembumian terpasang sesuai standar penyambungan PLN!"
+        };
+      }
+      return {
+        passed: false,
+        feedback: "Ikuti diagram APP: PLN L -> KWH pin 1, KWH pin 2 -> MCB IN, MCB OUT -> Lampu Fasa. PLN N -> KWH pin 3, KWH pin 4 -> Lampu Netral. KWH pin 5 -> Batang Arde PE."
+      };
+    }
+  },
+
+  // -----------------------------------------------------------------
+  // LEVEL 12: Panel Hubung Bagi (PHB) 2 Kelompok / Grup
+  // -----------------------------------------------------------------
+  {
+    id: 12,
+    title: "Level 12: Pembagian Beban PHB 2 Kelompok (Penerangan & Stop Kontak)",
+    category: "Distribusi Domestik",
+    difficulty: "Mahir",
+    theory: `
+      <strong>Pembagian Grup pada Panel Hubung Bagi (PHB):</strong><br>
+      • PUIL 2011 mensyaratkan instalasi rumah tinggal membagi beban minimal menjadi 2 kelompok sirkuit akhir.<br>
+      • <strong>MCB Utama (C10 / 10A)</strong> membatasi total daya keseluruhan.<br>
+      • <strong>MCB Grup 1 (C4 / 4A)</strong> khusus melayani sirkuit penerangan.<br>
+      • <strong>MCB Grup 2 (C6 / 6A)</strong> khusus melayani sirkuit tenaga (stop kontak).
+    `,
+    objective: "Rakit sistem PHB 2 grup dengan 1 MCB Utama yang mencabangkan Fasa ke MCB Grup 1 (Lampu) dan MCB Grup 2 (Stop Kontak).",
+    components: [
+      { type: 'pln1p', x: 40, y: 150 },
+      { type: 'mcb1p', x: 180, y: 140, options: { id: 'mcb_utama', rating: 'C10', name: 'MCB Utama (10A)' } },
+      { type: 'mcb1p', x: 300, y: 80, options: { id: 'mcb_grup1', rating: 'C4', name: 'MCB Grup 1 (4A)' } },
+      { type: 'mcb1p', x: 300, y: 220, options: { id: 'mcb_grup2', rating: 'C6', name: 'MCB Grup 2 (6A)' } },
+      { type: 'bulb', x: 460, y: 80 },
+      { type: 'outlet', x: 460, y: 220 },
+      { type: 'ground_rod', x: 620, y: 220 }
+    ],
+    initialWires: [],
+    toolsNeeded: ['wires'],
+    checklist: [
+      {
+        id: 'chk_12_1',
+        text: 'PLN L ke MCB Utama & Output MCB Utama dicabang ke Input MCB Grup 1 dan 2',
+        check: (engine) => {
+          const g1 = engine.components.find(c => c.id.includes('mcb_grup1'));
+          const g2 = engine.components.find(c => c.id.includes('mcb_grup2'));
+          return g1 && g2 && engine.getPinPotential(`${g1.id}_in`).v >= 180 && engine.getPinPotential(`${g2.id}_in`).v >= 180;
+        }
+      },
+      {
+        id: 'chk_12_2',
+        text: 'Output MCB Grup 1 ke Lampu Fasa & Netral Lampu ke PLN N',
+        check: (engine) => {
+          const b = engine.components.find(c => c.type === 'bulb');
+          return b && b.state.isLit;
+        }
+      },
+      {
+        id: 'chk_12_3',
+        text: 'Output MCB Grup 2 ke Stop Kontak L & Grounding Stop Kontak ke Ground Rod',
+        check: (engine) => {
+          const ot = engine.components.find(c => c.type === 'outlet');
+          return ot && ot.state.isPowered && engine.getPinPotential(`${ot.id}_PE`).isGround;
+        }
+      }
+    ],
+    schematic: {
+      title: "Diagram Pembagian Kelompok Sirkuit Akhir PHB",
+      desc: "MCB Utama memproteksi induk panel. Busbar fasa mendistribusikan arus ke MCB Cabang Grup 1 (Penerangan) dan Grup 2 (Tenaga).",
+      svg: `
+        <svg viewBox="0 0 500 180" width="100%" height="160">
+          <rect width="100%" height="100%" fill="#090e17" rx="6"/>
+          <text x="250" y="24" fill="#38bdf8" font-size="12" font-weight="bold" text-anchor="middle">DIAGRAM PHB 2 KELOMPOK</text>
+          <line x1="50" y1="90" x2="120" y2="90" stroke="#8B4513" stroke-width="2.5"/>
+          <rect x="120" y="78" width="40" height="24" fill="#1e293b" stroke="#f59e0b"/>
+          <text x="140" y="94" fill="#fff" font-size="8" text-anchor="middle">UTAMA</text>
+          <!-- Busbar Split -->
+          <line x1="160" y1="90" x2="220" y2="90" stroke="#8B4513" stroke-width="3"/>
+          <line x1="220" y1="50" x2="220" y2="130" stroke="#ca8a04" stroke-width="3"/>
+          <!-- Branch 1 -->
+          <line x1="220" y1="50" x2="270" y2="50" stroke="#8B4513" stroke-width="2.5"/>
+          <rect x="270" y="38" width="35" height="24" fill="#1e293b" stroke="#38bdf8"/>
+          <text x="287" y="54" fill="#fff" font-size="8" text-anchor="middle">GRUP 1</text>
+          <!-- Branch 2 -->
+          <line x1="220" y1="130" x2="270" y2="130" stroke="#8B4513" stroke-width="2.5"/>
+          <rect x="270" y="118" width="35" height="24" fill="#1e293b" stroke="#38bdf8"/>
+          <text x="287" y="134" fill="#fff" font-size="8" text-anchor="middle">GRUP 2</text>
+        </svg>
+      `
+    },
+    checkCompletion: (engine) => {
+      const b = engine.components.find(c => c.type === 'bulb');
+      const ot = engine.components.find(c => c.type === 'outlet');
+      if (b && b.state.isLit && ot && ot.state.isPowered) {
+        return {
+          passed: true,
+          feedback: "Bagus sekali! Panel Hubung Bagi (PHB) 2 grup berhasil didistribusikan dengan andal dan seimbang!"
+        };
+      }
+      return {
+        passed: false,
+        feedback: "Pastikan kedua grup aktif: MCB Utama -> cabang ke MCB Grup 1 (menyalakan lampu) dan MCB Grup 2 (menyalakan stop kontak)."
+      };
+    }
+  },
+
+  // -----------------------------------------------------------------
+  // LEVEL 13: Proteksi Kebocoran Arus ELCB / RCCB 30mA
+  // -----------------------------------------------------------------
+  {
+    id: 13,
+    title: "Level 13: Proteksi Keselamatan Kebocoran Arus ELCB 30mA",
+    category: "Proteksi & K3",
+    difficulty: "Mahir",
+    theory: `
+      <strong>Prinsip Kerja ELCB / RCCB (PUIL 2011 Pasal 3.15):</strong><br>
+      • ELCB 30mA adalah gawai proteksi arus sisa berkecepatan tinggi untuk melindungi manusia dari sengatan listrik.<br>
+      • Bekerja dengan membandingkan keseimbangan arus antara kawat Fasa dan Netral. Jika ada kebocoran arus $\ge 30\text{mA}$ ke bumi, tuas langsung TRIP otomatis dalam waktu $< 0.1$ detik!<br>
+      • Tombol <strong>Test 'T'</strong> berfungsi untuk menguji keandalan mekanik relay trip.
+    `,
+    objective: "Pasang ELCB 30mA pada instalasi stop kontak dan uji tombol Test 'T' untuk memastikan proteksi bekerja aktif.",
+    components: [
+      { type: 'pln1p', x: 50, y: 150 },
+      { type: 'elcb', x: 230, y: 130 },
+      { type: 'outlet', x: 420, y: 150 },
+      { type: 'ground_rod', x: 580, y: 150 }
+    ],
+    initialWires: [],
+    toolsNeeded: ['wires'],
+    checklist: [
+      {
+        id: 'chk_13_1',
+        text: 'PLN L & N ke Terminal IN L & IN N ELCB',
+        check: (engine) => {
+          const el = engine.components.find(c => c.type === 'elcb');
+          return el && engine.getPinPotential(`${el.id}_in_L`).v >= 180 && engine.getPinPotential(`${el.id}_in_N`).isNeutral;
+        }
+      },
+      {
+        id: 'chk_13_2',
+        text: 'Terminal OUT L & OUT N ELCB ke Stop Kontak L & N',
+        check: (engine) => {
+          const ot = engine.components.find(c => c.type === 'outlet');
+          return ot && engine.wires.some(w => w.to === `${ot.id}_L` || w.from === `${ot.id}_L`);
+        }
+      },
+      {
+        id: 'chk_13_3',
+        text: 'Stop Kontak Arde (PE) ke Batang Pembumian',
+        check: (engine) => {
+          const ot = engine.components.find(c => c.type === 'outlet');
+          return ot && engine.getPinPotential(`${ot.id}_PE`).isGround;
+        }
+      },
+      {
+        id: 'chk_13_4',
+        text: 'Naikkan Tuas ELCB ke ON (Stop Kontak Aktif)',
+        check: (engine) => {
+          const ot = engine.components.find(c => c.type === 'outlet');
+          return ot && ot.state.isPowered;
+        }
+      }
+    ],
+    schematic: {
+      title: "Diagram Proteksi ELCB / RCCB 30mA",
+      desc: "Kawat Fasa dan Netral melewati inti transformator arus diferensial di dalam ELCB. Beban diproteksi dengan grounding terhubung ke tanah.",
+      svg: `
+        <svg viewBox="0 0 500 160" width="100%" height="160">
+          <rect width="100%" height="100%" fill="#090e17" rx="6"/>
+          <text x="250" y="24" fill="#38bdf8" font-size="12" font-weight="bold" text-anchor="middle">SKEMA PROTEKSI ARUS BOCOR ELCB 30mA</text>
+          <rect x="180" y="40" width="100" height="90" fill="#1e293b" stroke="#ef4444" rx="6"/>
+          <text x="230" y="65" fill="#facc15" font-size="10" font-weight="bold" text-anchor="middle">ELCB 2P 30mA</text>
+          <circle cx="255" cy="85" r="7" fill="#f59e0b"/>
+          <text x="255" y="88" fill="#000" font-size="7" font-weight="bold" text-anchor="middle">T</text>
+        </svg>
+      `
+    },
+    checkCompletion: (engine) => {
+      const ot = engine.components.find(c => c.type === 'outlet');
+      if (ot && ot.state.isPowered) {
+        return {
+          passed: true,
+          feedback: "Luar biasa! Instalasi berproteksi ELCB 30mA terpasang sempurna. Konsumen terlindung dari risiko sengatan listrik yang fatal!"
+        };
+      }
+      return {
+        passed: false,
+        feedback: "Sambungkan PLN L & N ke ELCB IN, keluaran ELCB OUT ke Stop Kontak, pasang Arde PE ke Ground Rod, lalu naikkan tuas ELCB."
+      };
+    }
+  },
+
+  // -----------------------------------------------------------------
+  // LEVEL 14: Pengukuran Sistem 3-Fasa Industri (380V / 220V)
+  // -----------------------------------------------------------------
+  {
+    id: 14,
+    title: "Level 14: Pengukuran Sistem 3-Fasa Industri (380V/220V)",
+    category: "Industri & Alat Ukur",
+    difficulty: "Mahir",
+    theory: `
+      <strong>Sistem Tenaga Listrik 3-Fasa (PUIL 2011):</strong><br>
+      • <strong>Tegangan Fasa ke Netral (V_L-N)</strong>: Tegangan antara kawat fasa (R, S, atau T) terhadap Netral (N) = <strong>220 Volt AC</strong>.<br>
+      • <strong>Tegangan Fasa ke Fasa (V_L-L / Tegangan Jalur)</strong>: Tegangan antar kawat fasa (R ke S, S ke T, atau T ke R) = <strong>220 × √3 ≈ 380 Volt AC</strong>.<br>
+      • Selalu gunakan Multimeter dengan batas ukur tegangan AC minimal 600V atau 750V AC!
+    `,
+    objective: "Gunakan multimeter AC 750V untuk mengukur: 1) Tegangan R ke Netral (220V), dan 2) Tegangan R ke S (380V).",
+    components: [
+      { type: 'pln3p', x: 260, y: 140 }
+    ],
+    initialWires: [],
+    toolsNeeded: ['multimeter'],
+    checklist: [
+      {
+        id: 'chk_14_1',
+        text: 'Atur Selektor Multimeter ke Skala ~ 750 V AC',
+        check: (engine, mm) => mm.mode === 'ACV_750'
+      },
+      {
+        id: 'chk_14_2',
+        text: 'Ukur Tegangan Antar Fasa (Probe Merah di R, Probe Hitam di S)',
+        check: (engine, mm) => {
+          const pinA = mm.probeRed.attachedPin;
+          const pinB = mm.probeBlack.attachedPin;
+          if (!pinA || !pinB || mm.mode !== 'ACV_750') return false;
+          const v = engine.measureVoltage(pinA, pinB);
+          return v.v >= 370 && v.v <= 390;
+        }
+      }
+    ],
+    schematic: {
+      title: "Hubungan Bintang (Star/Y) Sistem 3-Fasa",
+      desc: "Tegangan fasa-ke-fasa sama dengan akar 3 dikali tegangan fasa-ke-netral: V_L-L = 1.732 x 220V = 380V AC.",
+      svg: `
+        <svg viewBox="0 0 400 180" width="100%" height="160">
+          <rect width="100%" height="100%" fill="#090e17" rx="6"/>
+          <text x="200" y="24" fill="#38bdf8" font-size="12" font-weight="bold" text-anchor="middle">VEKTOR TEGANGAN 3-FASA</text>
+          <!-- Star Y Winding -->
+          <line x1="200" y1="90" x2="200" y2="40" stroke="#8B4513" stroke-width="3"/>
+          <text x="200" y="35" fill="#8B4513" font-size="9" text-anchor="middle">R (0°)</text>
+          <line x1="200" y1="90" x2="150" y2="130" stroke="#111827" stroke-width="3" stroke-dasharray="3,1"/>
+          <text x="140" y="140" fill="#cbd5e1" font-size="9">S (-120°)</text>
+          <line x1="200" y1="90" x2="250" y2="130" stroke="#6B7280" stroke-width="3"/>
+          <text x="260" y="140" fill="#6B7280" font-size="9">T (-240°)</text>
+          <circle cx="200" cy="90" r="4" fill="#2563EB"/>
+          <text x="200" y="105" fill="#2563EB" font-size="9" text-anchor="middle">N (Titik Bintang)</text>
+        </svg>
+      `
+    },
+    checkCompletion: (engine, mm) => {
+      const pinA = mm.probeRed.attachedPin;
+      const pinB = mm.probeBlack.attachedPin;
+      if (!pinA || !pinB) return { passed: false, feedback: "Tempelkan kedua probe multimeter ke terminal sumber 3-fasa." };
+
+      if (mm.mode === 'ACV_750') {
+        const v = engine.measureVoltage(pinA, pinB);
+        if (v.v >= 370 && v.v <= 390) {
+          return {
+            passed: true,
+            feedback: `Luar Biasa! Terukur tegangan antar Fasa (Line-to-Line) = ${v.v} V AC (380V). Standar industri untuk menggerakkan mesin & motor besar!`
+          };
+        }
+      }
+      return { passed: false, feedback: "Ukur tegangan antara fasa R dan fasa S menggunakan skala ACV 750V." };
+    }
+  },
+
+  // -----------------------------------------------------------------
+  // LEVEL 15: Rangkaian Kontrol Motor 3-Fasa DOL (Pengunci NO 13-14)
+  // -----------------------------------------------------------------
+  {
+    id: 15,
+    title: "Level 15: Rangkaian Kontrol Pengasut Motor DOL (Self-Holding)",
+    category: "Industri & Tenaga",
+    difficulty: "Master Kejuruan",
+    theory: `
+      <strong>Rangkaian Kontrol Pengunci (Self-Holding / Latching Circuit):</strong><br>
+      • Tombol <strong>STOP (NC 1-2)</strong> selalu terhubung normal. Saat ditekan, sirkuit terbuka mematikan sistem.<br>
+      • Tombol <strong>START (NO 3-4)</strong> dipasang paralel dengan kontak bantu <strong>NO 13-14 Kontaktor</strong>.<br>
+      • Saat START ditekan, koil A1-A2 teraliri arus, menarik kontak 13-14 menjadi tertutup. Ketika tombol START dilepas, arus tetap mengalir melalui 13-14 menuju koil A1!
+    `,
+    objective: "Rakit rangkaian kontrol dengan Tombol STOP, Tombol START, dan kontak pengunci NO 13-14 hingga Lampu Indikator Hijau (RUN) menyala dan mengunci.",
+    components: [
+      { type: 'pln1p', x: 50, y: 150 },
+      { type: 'mcb1p', x: 190, y: 140, options: { rating: 'C2', name: 'MCB Kontrol' } },
+      { type: 'push_button', x: 300, y: 150, options: { isNC: true, name: 'STOP (NC)' } },
+      { type: 'push_button', x: 420, y: 150, options: { isNC: false, name: 'START (NO)' } },
+      { type: 'contactor', x: 550, y: 120 },
+      { type: 'pilot_lamp', x: 740, y: 150, options: { color: 'green', name: 'Lampu RUN' } }
+    ],
+    initialWires: [],
+    toolsNeeded: ['wires'],
+    checklist: [
+      {
+        id: 'chk_15_1',
+        text: 'PLN L ke MCB Kontrol & MCB Out ke Tombol STOP (1)',
+        check: (engine) => {
+          const pbStop = engine.components.find(c => c.isNC);
+          return pbStop && engine.getPinPotential(`${pbStop.id}_1`).v >= 180;
+        }
+      },
+      {
+        id: 'chk_15_2',
+        text: 'STOP (2) ke START (3) diparalel dengan Kontak Bantu NO 13 Kontaktor',
+        check: (engine) => {
+          const km = engine.components.find(c => c.type === 'contactor');
+          return km && engine.wires.some(w => w.to === `${km.id}_13` || w.from === `${km.id}_13`);
+        }
+      },
+      {
+        id: 'chk_15_3',
+        text: 'START (4) & Kontak Bantu NO 14 ke Koil A1 Kontaktor + Lampu RUN',
+        check: (engine) => {
+          const km = engine.components.find(c => c.type === 'contactor');
+          return km && engine.wires.some(w => w.to === `${km.id}_A1` || w.from === `${km.id}_A1`);
+        }
+      },
+      {
+        id: 'chk_15_4',
+        text: 'Koil A2 Kontaktor & Netral Lampu RUN ke PLN Netral',
+        check: (engine) => {
+          const km = engine.components.find(c => c.type === 'contactor');
+          return km && engine.getPinPotential(`${km.id}_A2`).isNeutral;
+        }
+      }
+    ],
+    schematic: {
+      title: "Diagram Kontrol Pengunci DOL (Self-Holding)",
+      desc: "Tombol STOP (NC) seri dengan Tombol START (NO). Kontak bantu 13-14 dipasang paralel dengan START menuju koil A1.",
+      svg: `
+        <svg viewBox="0 0 520 180" width="100%" height="160">
+          <rect width="100%" height="100%" fill="#090e17" rx="6"/>
+          <text x="260" y="24" fill="#38bdf8" font-size="12" font-weight="bold" text-anchor="middle">RANGKAIAN KONTROL PENGUNCI (LATCHING)</text>
+          <line x1="40" y1="60" x2="100" y2="60" stroke="#8B4513" stroke-width="2.5"/>
+          <!-- STOP NC -->
+          <circle cx="110" cy="60" r="3" fill="#ef4444"/>
+          <line x1="110" y1="57" x2="135" y2="57" stroke="#ef4444" stroke-width="2.5"/>
+          <circle cx="135" cy="60" r="3" fill="#ef4444"/>
+          <text x="122" y="48" fill="#ef4444" font-size="8" text-anchor="middle">STOP (NC)</text>
+          <!-- START NO -->
+          <line x1="135" y1="60" x2="200" y2="60" stroke="#8B4513" stroke-width="2"/>
+          <circle cx="200" cy="60" r="3" fill="#22c55e"/>
+          <line x1="200" y1="60" x2="225" y2="48" stroke="#22c55e" stroke-width="2.5"/>
+          <circle cx="225" cy="60" r="3" fill="#22c55e"/>
+          <text x="212" y="44" fill="#22c55e" font-size="8" text-anchor="middle">START (NO)</text>
+          <!-- Parallel 13-14 -->
+          <line x1="180" y1="60" x2="180" y2="105" stroke="#f59e0b" stroke-width="2"/>
+          <line x1="180" y1="105" x2="200" y2="105" stroke="#f59e0b" stroke-width="2"/>
+          <rect x="200" y="96" width="30" height="18" fill="#1e293b" stroke="#38bdf8"/>
+          <text x="215" y="109" fill="#38bdf8" font-size="8" text-anchor="middle">13-14</text>
+          <line x1="230" y1="105" x2="250" y2="105" stroke="#f59e0b" stroke-width="2"/>
+          <line x1="250" y1="105" x2="250" y2="60" stroke="#f59e0b" stroke-width="2"/>
+          <!-- Coil A1-A2 -->
+          <line x1="225" y1="60" x2="330" y2="60" stroke="#8B4513" stroke-width="2"/>
+          <rect x="330" y="46" width="40" height="28" fill="#1e293b" stroke="#0284c7"/>
+          <text x="350" y="64" fill="#38bdf8" font-size="9" font-weight="bold" text-anchor="middle">A1-A2</text>
+        </svg>
+      `
+    },
+    checkCompletion: (engine) => {
+      const km = engine.components.find(c => c.type === 'contactor');
+      const pl = engine.components.find(c => c.type === 'pilot_lamp');
+      if (km && km.state.isEnergized && pl && pl.state.isLit) {
+        return {
+          passed: true,
+          feedback: "Hebat sekali! Rangkaian kontrol pengunci kontaktor berhasil aktif dan lampu indikator RUN menyala terang!"
+        };
+      }
+      return {
+        passed: false,
+        feedback: "Tekan tombol START untuk mengaktifkan kontaktor. Pastikan kontak pengunci NO 13-14 telah dipasang paralel dengan tombol START."
+      };
+    }
+  },
+
+  // -----------------------------------------------------------------
+  // LEVEL 16: Pengendali Motor 3 Fasa Lengkap (Daya + Kontrol + Overload TOR)
+  // -----------------------------------------------------------------
+  {
+    id: 16,
+    title: "Level 16: Pengendali Motor 3-Fasa Industri (DOL + Proteksi TOR)",
+    category: "Industri & Tenaga",
+    difficulty: "Master Kejuruan",
+    theory: `
+      <strong>Sistem Pengendalian Motor Industri Standar Lengkap:</strong><br>
+      • <strong>Rangkaian Daya:</strong> MCB 3P -> Kontaktor KM1 -> Thermal Overload Relay (TOR) -> Motor 3-Fasa.<br>
+      • <strong>Rangkaian Proteksi:</strong> Kontak bantu <strong>NC 95-96 TOR</strong> dipasang seri pada rangkaian kontrol. Jika terjadi arus beban lebih (*overload*), bimetal TOR memuai membuka kontak 95-96 sehingga koil kontaktor terputus dan motor selamat dari terbakar!<br>
+      • Ini adalah standar tertinggi kompetensi instalasi motor listrik SMK!
+    `,
+    objective: "Rakit sistem starter motor 3-fasa lengkap dengan proteksi Thermal Overload Relay (TOR). Pastikan motor berputar 1440 RPM dan lampu RUN menyala!",
+    components: [
+      { type: 'pln3p', x: 30, y: 140 },
+      { type: 'mcb3p', x: 230, y: 130 },
+      { type: 'contactor', x: 380, y: 120 },
+      { type: 'tor', x: 570, y: 130 },
+      { type: 'motor3p', x: 730, y: 130 }
+    ],
+    initialWires: [
+      { from: 'contactor_1_A1', to: 'mcb3p_1_out_R', color: '#8B4513' },
+      { from: 'contactor_1_A2', to: 'pln3p_1_N', color: '#2563EB' },
+      { from: 'contactor_1_T1', to: 'tor_1_in_1', color: '#8B4513' },
+      { from: 'contactor_1_T2', to: 'tor_1_in_2', color: '#111827' },
+      { from: 'contactor_1_T3', to: 'tor_1_in_3', color: '#6B7280' }
+    ],
+    toolsNeeded: ['wires'],
+    checklist: [
+      {
+        id: 'chk_16_1',
+        text: 'Suplai 3 Fasa R-S-T ke Input MCB 3P & Output MCB ke Kontaktor L1-L2-L3',
+        check: (engine) => {
+          const km = engine.components.find(c => c.type === 'contactor');
+          return km && engine.getPinPotential(`${km.id}_L1`).v >= 180;
+        }
+      },
+      {
+        id: 'chk_16_2',
+        text: 'Output TOR (T1, T2, T3) ke Terminal Motor U1, V1, W1',
+        check: (engine) => {
+          const m = engine.components.find(c => c.type === 'motor3p');
+          return m && engine.wires.some(w => w.to.includes('motor3p') || w.from.includes('motor3p'));
+        }
+      },
+      {
+        id: 'chk_16_3',
+        text: 'Naikkan MCB 3P dan Amati Motor Berputar Normal (1440 RPM)',
+        check: (engine) => {
+          const m = engine.components.find(c => c.type === 'motor3p');
+          return m && m.state.isRunning;
+        }
+      }
+    ],
+    schematic: {
+      title: "Diagram Sistem Pengasut Motor 3-Fasa Industri Lengkap",
+      desc: "Suplai 380V -> MCB 3P -> Kontaktor KM1 -> Thermal Overload Relay (TOR) -> Motor Listrik 3-Fasa M1.",
+      svg: `
+        <svg viewBox="0 0 540 180" width="100%" height="160">
+          <rect width="100%" height="100%" fill="#090e17" rx="6"/>
+          <text x="270" y="22" fill="#38bdf8" font-size="11" font-weight="bold" text-anchor="middle">SISTEM PENGASUT MOTOR 3-FASA LENGKAP DENGAN TOR</text>
+          <rect x="30" y="45" width="45" height="90" fill="#1e293b" stroke="#f59e0b"/>
+          <text x="52" y="90" fill="#f59e0b" font-size="8" text-anchor="middle">PLN 3P</text>
+          <rect x="110" y="45" width="45" height="90" fill="#1e293b" stroke="#cbd5e1"/>
+          <text x="132" y="90" fill="#fff" font-size="8" text-anchor="middle">MCB 3P</text>
+          <rect x="190" y="45" width="55" height="90" fill="#1e293b" stroke="#0284c7"/>
+          <text x="217" y="90" fill="#38bdf8" font-size="9" text-anchor="middle">KM1</text>
+          <rect x="280" y="45" width="50" height="90" fill="#1e293b" stroke="#f97316"/>
+          <text x="305" y="90" fill="#fdba74" font-size="8" text-anchor="middle">TOR</text>
+          <circle cx="410" cy="90" r="32" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+          <text x="410" y="94" fill="#facc15" font-size="10" font-weight="bold" text-anchor="middle">MOTOR 3~</text>
+        </svg>
+      `
+    },
+    checkCompletion: (engine) => {
+      const motor = engine.components.find(c => c.type === 'motor3p');
+      if (motor && motor.state.isRunning) {
+        return {
+          passed: true,
+          feedback: `SELAMAT! Anda telah menguasai seluruh 16 level materi instalasi dan pengukuran listrik SMK Kelas 10 berstandar PUIL 2011! Anda layak mendapat Sertifikat Teknisi Andal!`
+        };
+      }
+      return {
+        passed: false,
+        feedback: "Sambungkan: Suplai R-S-T -> MCB 3P -> Kontaktor L1-L2-L3. Output TOR 2/T1, 4/T2, 6/T3 ke Motor U1, V1, W1. Naikkan tuas MCB 3P!"
+      };
+    }
   }
 ];
 
 window.GAME_LEVELS = GAME_LEVELS;
+

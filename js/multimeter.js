@@ -36,7 +36,10 @@ class MultimeterTool {
     dmmPanel.innerHTML = `
       <div class="dmm-header">
         <span class="dmm-brand">⚡ VOLTCRAFT DMM-500</span>
-        <span class="dmm-cat">CAT III 600V</span>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="dmm-cat">CAT III 600V</span>
+          <button class="dmm-min-btn" onclick="app.multimeter.toggleMinimize()" title="Perkecil/Perbesar Tampilan Multimeter">─</button>
+        </div>
       </div>
 
       <!-- High-Contrast Digital LCD Screen -->
@@ -105,6 +108,11 @@ class MultimeterTool {
     };
     const deg = angles[this.mode] !== undefined ? angles[this.mode] : 45;
     dial.style.transform = `rotate(${deg}deg)`;
+  }
+
+  toggleMinimize() {
+    const dmm = document.getElementById('multimeter-hud');
+    if (dmm) dmm.classList.toggle('minimized');
   }
 
   resetProbes() {

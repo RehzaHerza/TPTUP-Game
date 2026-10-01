@@ -1056,6 +1056,196 @@ class Motor3P extends BaseComponent {
 }
 
 // -------------------------------------------------------------
+// 17. PILOT LAMP (Lampu Indikator Panel - Merah/Hijau/Kuning)
+// -------------------------------------------------------------
+class PilotLamp extends BaseComponent {
+  constructor(x, y, options = {}) {
+    super('pilot_lamp', x, y, options);
+    this.color = options.color || 'green'; // 'red', 'green', 'yellow'
+    const colorLabels = { red: 'MERAH (STOP)', green: 'HIJAU (RUN)', yellow: 'KUNING (TRIP)' };
+    this.name = options.name || `Pilot Lamp ${colorLabels[this.color] || this.color.toUpperCase()}`;
+    this.state = { isLit: false, voltage: 0 };
+
+    this.pins = [
+      { id: `${this.id}_L`, label: 'L (Fasa)', type: 'IN', x: 25, y: 95, color: '#f59e0b' },
+      { id: `${this.id}_N`, label: 'N (Netral)', type: 'IN', x: 75, y: 95, color: '#2563EB' }
+    ];
+  }
+
+  updateState(engine) {
+    const meas = engine.measureVoltage(`${this.id}_L`, `${this.id}_N`);
+    const wasLit = this.state.isLit;
+    this.state.voltage = meas.v;
+    this.state.isLit = (meas.v >= 160);
+    return wasLit !== this.state.isLit;
+  }
+
+  getInternalResistancePaths() {
+    return [{ p1: `${this.id}_L`, p2: `${this.id}_N`, r: 1200 }];
+  }
+
+  renderSVG() {
+    const colorHex = { red: '#ef4444', green: '#22c55e', yellow: '#facc15' }[this.color] || '#22c55e';
+    const dimHex = { red: '#7f1d1d', green: '#14532d', yellow: '#713f12' }[this.color] || '#14532d';
+    const currentFill = this.state.isLit ? colorHex : dimHex;
+    const glowFilter = this.state.isLit ? `filter: drop-shadow(0 0 14px ${colorHex});` : '';
+
+    return `
+      <g class="comp pilot-lamp-comp" id="comp_${this.id}" transform="translate(${this.x}, ${this.y})">
+        <rect width="100" height="105" rx="8" fill="#1e293b" stroke="#475569" stroke-width="2"/>
+        <text x="50" y="16" text-anchor="middle" fill="#94a3b8" font-size="8.5" font-weight="bold">${this.color.toUpperCase()} LAMP</text>
+        
+        <!-- Bezel -->
+        <circle cx="50" cy="46" r="24" fill="#334155" stroke="#64748b" stroke-width="2"/>
+        <circle cx="50" cy="46" r="18" fill="${currentFill}" stroke="#0f172a" stroke-width="1.5" style="${glowFilter}"/>
+        
+        ${this.state.isLit ? `
+          <circle cx="45" cy="40" r="5" fill="#fff" opacity="0.6"/>
+        ` : ''}
+
+        ${renderPinDOM(this.pins[0], 'L')}
+        ${renderPinDOM(this.pins[1], 'N')}
+      </g>
+    `;
+  }
+}
+
+// -------------------------------------------------------------
+// 18. ELCB / RCCB (Earth Leakage Circuit Breaker 30mA)
+// -------------------------------------------------------------
+class ELCB extends BaseComponent {
+  constructor(x, y, options = {}) {
+    super('elcb', x, y, options);
+    this.name = "ELCB / RCCB 30mA";
+    this.state = { isOn: options.isOn || false, tripped: false };
+
+    this.pins = [
+      { id: `${this.id}_in_L`, label: 'In L', type: 'IN', x: 25, y: 10, color: '#8B4513' },
+      { id: `${this.id}_in_N`, label: 'In N', type: 'IN', x: 75, y: 10, color: '#2563EB' },
+      { id: `${this.id}_out_L`, label: 'Out L', type: 'OUT', x: 25, y: 145, color: '#8B4513' },
+      { id: `${this.id}_out_N`, label: 'Out N', type: 'OUT', x: 75, y: 145, color: '#2563EB' }
+    ];
+  }
+
+  toggle() {
+    this.state.isOn = !this.state.isOn;
+    this.state.tripped = false;
+    if (window.sound) window.sound.playMcbToggle(this.state.isOn);
+  }
+
+  testTrip() {
+    this.state.isOn = false;
+    this.state.tripped = true;
+    if (window.sound) window.sound.playMcbTrip();
+  }
+
+  getInternalConnections() {
+    if (this.state.isOn && !this.state.tripped) {
+      return [
+        [`${this.id}_in_L`, `${this.id}_out_L`],
+        [`${this.id}_in_N`, `${this.id}_out_N`]
+      ];
+    }
+    return [];
+  }
+
+  getInternalResistancePaths() {
+    if (this.state.isOn && !this.state.tripped) {
+      return [
+        { p1: `${this.id}_in_L`, p2: `${this.id}_out_L`, r: 0.05 },
+        { p1: `${this.id}_in_N`, p2: `${this.id}_out_N`, r: 0.05 }
+      ];
+    }
+    return [];
+  }
+
+  renderSVG() {
+    const leverColor = this.state.tripped ? '#ef4444' : (this.state.isOn ? '#22c55e' : '#64748b');
+    const leverY = this.state.isOn ? 55 : 75;
+
+    return `
+      <g class="comp elcb-comp" id="comp_${this.id}" transform="translate(${this.x}, ${this.y})">
+        <rect width="100" height="155" rx="6" fill="#e2e8f0" stroke="#475569" stroke-width="2"/>
+        <rect x="10" y="25" width="80" height="105" rx="4" fill="#cbd5e1"/>
+
+        <text x="50" y="38" text-anchor="middle" fill="#0f172a" font-size="9.5" font-weight="bold">ELCB 2P</text>
+        <text x="50" y="50" text-anchor="middle" fill="#dc2626" font-size="8.5" font-weight="bold">IΔn = 30mA</text>
+
+        <!-- Test Push Button T -->
+        <circle cx="75" cy="70" r="8" fill="#f59e0b" stroke="#0f172a" stroke-width="1" style="cursor:pointer;"
+                onclick="app.testTripELCB('${this.id}')"/>
+        <text x="75" y="73" text-anchor="middle" fill="#0f172a" font-size="8" font-weight="bold" pointer-events="none">T</text>
+
+        <!-- Toggle Lever -->
+        <rect x="20" y="${leverY}" width="34" height="24" rx="4" fill="${leverColor}" stroke="#1e293b" stroke-width="1.5"
+              class="mcb-lever" style="cursor:pointer;" onclick="app.toggleComponent('${this.id}')"/>
+        <text x="37" y="${leverY + 16}" text-anchor="middle" fill="#fff" font-size="9" font-weight="bold" pointer-events="none">
+          ${this.state.isOn ? 'ON' : 'OFF'}
+        </text>
+
+        ${renderPinDOM(this.pins[0], 'IN L')}
+        ${renderPinDOM(this.pins[1], 'IN N')}
+        ${renderPinDOM(this.pins[2], 'OUT L')}
+        ${renderPinDOM(this.pins[3], 'OUT N')}
+      </g>
+    `;
+  }
+}
+
+// -------------------------------------------------------------
+// 19. CROSS SWITCH (Sakelar Silang / 4-Terminal Intermediate)
+// -------------------------------------------------------------
+class CrossSwitch extends BaseComponent {
+  constructor(x, y, options = {}) {
+    super('switch_cross', x, y, options);
+    this.name = "Sakelar Silang (Cross Switch)";
+    this.state = { position: 1 }; // 1: straight (1-3, 2-4), 2: cross (1-4, 2-3)
+
+    this.pins = [
+      { id: `${this.id}_1`, label: '1 (In A)', type: 'IN', x: 25, y: 15, color: '#f59e0b' },
+      { id: `${this.id}_2`, label: '2 (In B)', type: 'IN', x: 85, y: 15, color: '#f59e0b' },
+      { id: `${this.id}_3`, label: '3 (Out A)', type: 'OUT', x: 25, y: 125, color: '#f59e0b' },
+      { id: `${this.id}_4`, label: '4 (Out B)', type: 'OUT', x: 85, y: 125, color: '#f59e0b' }
+    ];
+  }
+
+  toggle() {
+    this.state.position = this.state.position === 1 ? 2 : 1;
+    if (window.sound) window.sound.playSwitch();
+  }
+
+  getInternalConnections() {
+    if (this.state.position === 1) {
+      return [[`${this.id}_1`, `${this.id}_3`], [`${this.id}_2`, `${this.id}_4`]];
+    } else {
+      return [[`${this.id}_1`, `${this.id}_4`], [`${this.id}_2`, `${this.id}_3`]];
+    }
+  }
+
+  renderSVG() {
+    return `
+      <g class="comp switch-cross-comp" id="comp_${this.id}" transform="translate(${this.x}, ${this.y})">
+        <rect width="110" height="135" rx="8" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+        <text x="55" y="42" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#0f172a">SAKELAR SILANG</text>
+        
+        <!-- Toggle button -->
+        <rect x="25" y="50" width="60" height="42" rx="4" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"
+              style="cursor:pointer;" onclick="app.toggleComponent('${this.id}')"/>
+        <text x="55" y="68" text-anchor="middle" font-size="10" font-weight="bold" fill="#0284c7">
+          ${this.state.position === 1 ? 'LURUS (||)' : 'SILANG (X)'}
+        </text>
+        <text x="55" y="82" text-anchor="middle" font-size="8" fill="#64748b">Posisi ${this.state.position}</text>
+
+        ${renderPinDOM(this.pins[0], '1')}
+        ${renderPinDOM(this.pins[1], '2')}
+        ${renderPinDOM(this.pins[2], '3')}
+        ${renderPinDOM(this.pins[3], '4')}
+      </g>
+    `;
+  }
+}
+
+// -------------------------------------------------------------
 // HELPER: Pin SVG DOM Renderer
 // -------------------------------------------------------------
 function renderPinDOM(pin, label) {
@@ -1086,13 +1276,16 @@ function createComponent(type, x, y, options = {}) {
     case 'switch_single': return new SingleSwitch(x, y, options);
     case 'switch_double': return new DoubleSwitch(x, y, options);
     case 'switch_hotel': return new ChangeoverSwitch(x, y, options);
+    case 'switch_cross': return new CrossSwitch(x, y, options);
     case 'bulb': return new BulbPijar(x, y, options);
+    case 'pilot_lamp': return new PilotLamp(x, y, options);
     case 'outlet': return new Outlet2P(x, y, options);
     case 'kwh_meter': return new KWHMeter(x, y, options);
     case 'ground_rod': return new GroundRod(x, y, options);
     case 'push_button': return new PushButton(x, y, options);
     case 'contactor': return new MagneticContactor(x, y, options);
     case 'tor': return new ThermalOverloadRelay(x, y, options);
+    case 'elcb': return new ELCB(x, y, options);
     case 'motor3p': return new Motor3P(x, y, options);
     default:
       console.warn('Unknown component type:', type);
@@ -1101,3 +1294,4 @@ function createComponent(type, x, y, options = {}) {
 }
 
 window.createComponent = createComponent;
+

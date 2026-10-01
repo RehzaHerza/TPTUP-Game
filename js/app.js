@@ -1,12 +1,18 @@
 /**
  * Main Application Controller for VoltMaster SMK
- * Enhanced with Live Checklist tracking, Schematic Blueprint viewer,
- * Interactive Onboarding, Terminal Tooltips, and Animated Current Flow.
+ * Enhanced with:
+ * - Pan & Zoom for TV Interactive Panels, Mobile & Desktop
+ * - Touch & Stylus Friendly Controls
+ * - 16 Full Vocational Levels & 6 UKK Troubleshooting Cases
+ * - Jobsheet & Module Import/Export System
+ * - Vocational Assessment Report Generation (PDF/Print)
+ * - Animated Current Flow on Energized Wires
+ * - Live Step-by-Step Checklist
  */
 
 class VoltMasterApp {
   constructor() {
-    this.currentMode = 'misi'; // 'misi' | 'troubleshoot' | 'sandbox'
+    this.currentMode = 'misi'; // 'misi' | 'troubleshoot' | 'sandbox' | 'jobsheet'
     this.currentLevelIdx = 0;
     this.currentCaseIdx = 0;
     
@@ -18,9 +24,18 @@ class VoltMasterApp {
     this.mousePos = { x: 0, y: 0 };
     this.selectedWireColor = '#8B4513'; // Default Brown (PUIL Phase L/R)
 
+    // Pan & Zoom Engine for TV Panels, Tablets, and Desktop
+    this.zoomScale = 1.0;
+    this.panOffset = { x: 0, y: 0 };
+    this.isCanvasPanning = false;
+    this.panStartPos = { x: 0, y: 0 };
+    this.pinchDist = null;
+
     // Dragging state for components or probes
     this.draggingTarget = null;
     this.dragOffset = { x: 0, y: 0 };
+
+    this.isTVMode = false;
 
     this.engine = new CircuitEngine();
     window.circuitEngine = this.engine;
@@ -54,6 +69,7 @@ class VoltMasterApp {
   init() {
     this.svg = document.getElementById('workbench-svg');
     this.sandbox = new SandboxManager(this);
+    this.jobsheet = new JobsheetManager(this);
     this.multimeter = new MultimeterTool(document.getElementById('workbench-container'));
 
     this.setupEventListeners();
@@ -75,16 +91,37 @@ class VoltMasterApp {
 
     const getSVGCoords = (e) => {
       const rect = this.svg.getBoundingClientRect();
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const clientX = e.touches ? e.touches[0].clientX : (e.clientX !== undefined ? e.clientX : 0);
+      const clientY = e.touches ? e.touches[0].clientY : (e.clientY !== undefined ? e.clientY : 0);
       return {
-        x: clientX - rect.left,
-        y: clientY - rect.top
+        x: (clientX - rect.left - this.panOffset.x) / this.zoomScale,
+        y: (clientY - rect.top - this.panOffset.y) / this.zoomScale,
+        rawX: clientX - rect.left,
+        rawY: clientY - rect.top
       };
     };
 
-    container.addEventListener('mousemove', (e) => {
-      this.mousePos = getSVGCoords(e);
+    // Canvas Background Drag for Panning (Empty space drag)
+    this.svg.addEventListener('pointerdown', (e) => {
+      // Check if clicked directly on SVG or grid rect
+      const isBg = e.target === this.svg || (e.target.tagName === 'rect' && e.target.getAttribute('fill') === 'url(#grid)');
+      if (isBg && !this.activeWireStart && !this.draggingTarget) {
+        this.isCanvasPanning = true;
+        this.panStartPos = { x: e.clientX - this.panOffset.x, y: e.clientY - this.panOffset.y };
+      }
+    });
+
+    container.addEventListener('pointermove', (e) => {
+      const coords = getSVGCoords(e);
+      this.mousePos = { x: coords.x, y: coords.y };
+
+      // Handle Canvas Panning
+      if (this.isCanvasPanning) {
+        this.panOffset.x = e.clientX - this.panStartPos.x;
+        this.panOffset.y = e.clientY - this.panStartPos.y;
+        this.render();
+        return;
+      }
 
       // Handle probe dragging
       if (this.draggingTarget) {
@@ -109,7 +146,7 @@ class VoltMasterApp {
           this.render();
           return;
         }
-        if (this.draggingTarget.type === 'component' && this.currentMode === 'sandbox') {
+        if (this.draggingTarget.type === 'component' && (this.currentMode === 'sandbox' || this.currentMode === 'jobsheet')) {
           const comp = this.components.find(c => c.id === this.draggingTarget.id);
           if (comp) {
             comp.x = Math.max(10, this.mousePos.x - this.dragOffset.x);
@@ -120,13 +157,16 @@ class VoltMasterApp {
         }
       }
 
+      // If drawing a wire, re-render to update dynamic wire path
       if (this.activeWireStart) {
         this.render();
       }
     });
 
-    window.addEventListener('mouseup', () => {
+    window.addEventListener('pointerup', () => {
       this.draggingTarget = null;
+      this.isCanvasPanning = false;
+
       let anyReleased = false;
       this.components.forEach(c => {
         if (c.type === 'push_button' && c.state.isPressed) {
@@ -140,53 +180,110 @@ class VoltMasterApp {
       }
     });
 
-    window.addEventListener('touchend', () => {
-      this.draggingTarget = null;
-      let anyReleased = false;
-      this.components.forEach(c => {
-        if (c.type === 'push_button' && c.state.isPressed) {
-          c.release();
-          anyReleased = true;
-        }
-      });
-      if (anyReleased) {
-        this.recalculate();
-        this.render();
-      }
-    });
-
-    // Touch support for drag
+    // Touch Pinch-to-Zoom Support for Tablets & TV Interactive Panels
     container.addEventListener('touchmove', (e) => {
-      if (this.draggingTarget || this.activeWireStart) {
+      if (e.touches && e.touches.length === 2) {
         e.preventDefault();
-        this.mousePos = getSVGCoords(e);
-        if (this.draggingTarget) {
-          if (this.draggingTarget.type === 'probe_red') {
-            this.multimeter.probeRed.x = this.mousePos.x;
-            this.multimeter.probeRed.y = this.mousePos.y;
-            this.checkProbeSnap('red');
-          } else if (this.draggingTarget.type === 'probe_black') {
-            this.multimeter.probeBlack.x = this.mousePos.x;
-            this.multimeter.probeBlack.y = this.mousePos.y;
-            this.checkProbeSnap('black');
-          } else if (this.draggingTarget.type === 'tespen') {
-            this.multimeter.tespenPos.x = this.mousePos.x;
-            this.multimeter.tespenPos.y = this.mousePos.y;
-            this.checkProbeSnap('tespen');
+        const dist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        if (this.pinchDist !== null) {
+          const diff = dist - this.pinchDist;
+          if (Math.abs(diff) > 4) {
+            this.zoomScale = Math.min(2.5, Math.max(0.5, this.zoomScale + diff * 0.005));
+            this.updateZoomDisplay();
+            this.render();
           }
-          this.render();
         }
+        this.pinchDist = dist;
       }
     }, { passive: false });
 
+    container.addEventListener('touchend', (e) => {
+      if (!e.touches || e.touches.length < 2) {
+        this.pinchDist = null;
+      }
+    });
+
     // PUIL color selector buttons
     document.querySelectorAll('.wire-color-swatch').forEach(el => {
-      el.addEventListener('click', (e) => {
+      el.addEventListener('click', () => {
         document.querySelectorAll('.wire-color-swatch').forEach(s => s.classList.remove('active'));
         el.classList.add('active');
         this.selectedWireColor = el.dataset.color;
       });
     });
+  }
+
+  // -------------------------------------------------------------
+  // PAN & ZOOM CONTROLS (Ideal for TV Interactive Panels & Mobile)
+  // -------------------------------------------------------------
+  zoomIn() {
+    this.zoomScale = Math.min(2.5, Math.round((this.zoomScale + 0.15) * 100) / 100);
+    this.updateZoomDisplay();
+    this.render();
+  }
+
+  zoomOut() {
+    this.zoomScale = Math.max(0.5, Math.round((this.zoomScale - 0.15) * 100) / 100);
+    this.updateZoomDisplay();
+    this.render();
+  }
+
+  resetZoom() {
+    this.zoomScale = 1.0;
+    this.panOffset = { x: 0, y: 0 };
+    this.updateZoomDisplay();
+    this.render();
+  }
+
+  fitToScreen() {
+    if (this.components.length === 0) {
+      this.resetZoom();
+      return;
+    }
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    this.components.forEach(c => {
+      minX = Math.min(minX, c.x);
+      minY = Math.min(minY, c.y);
+      maxX = Math.max(maxX, c.x + 190);
+      maxY = Math.max(maxY, c.y + 160);
+    });
+
+    const rect = this.svg.getBoundingClientRect();
+    const width = Math.max(200, maxX - minX + 80);
+    const height = Math.max(200, maxY - minY + 80);
+    const scaleX = rect.width / width;
+    const scaleY = rect.height / height;
+
+    this.zoomScale = Math.min(1.4, Math.max(0.6, Math.min(scaleX, scaleY)));
+    this.panOffset.x = (rect.width - width * this.zoomScale) / 2 - minX * this.zoomScale + 40;
+    this.panOffset.y = (rect.height - height * this.zoomScale) / 2 - minY * this.zoomScale + 40;
+
+    this.updateZoomDisplay();
+    this.render();
+  }
+
+  updateZoomDisplay() {
+    const lbl = document.getElementById('zoom-percentage');
+    if (lbl) lbl.innerText = `${Math.round(this.zoomScale * 100)}%`;
+  }
+
+  toggleTVMode() {
+    this.isTVMode = !this.isTVMode;
+    document.body.classList.toggle('tv-mode', this.isTVMode);
+    const btn = document.getElementById('btn-tv-mode');
+    if (btn) btn.classList.toggle('active', this.isTVMode);
+    this.render();
+  }
+
+  toggleMobileSidebar(force) {
+    const sb = document.querySelector('.sidebar');
+    if (sb) {
+      if (force !== undefined) sb.classList.toggle('open', force);
+      else sb.classList.toggle('open');
+    }
   }
 
   checkProbeSnap(probeType) {
@@ -203,7 +300,7 @@ class VoltMasterApp {
     }
 
     let closestPin = null;
-    let minDist = 28;
+    let minDist = 30;
 
     this.components.forEach(comp => {
       comp.pins.forEach(pin => {
@@ -225,6 +322,7 @@ class VoltMasterApp {
     }
 
     this.multimeter.evaluate();
+    this.updateChecklistUI();
   }
 
   switchTab(tabName) {
@@ -233,13 +331,19 @@ class VoltMasterApp {
     const activeTab = document.getElementById(`tab-${tabName}`);
     if (activeTab) activeTab.classList.add('active');
 
+    // Toggle panels
     const missionPanel = document.getElementById('mission-info-panel');
-    const sandboxPanel = document.getElementById('sandbox-tools-panel');
     const troublePanel = document.getElementById('troubleshoot-tools-panel');
+    const sandboxPanel = document.getElementById('sandbox-tools-panel');
+    const jobsheetPanel = document.getElementById('jobsheet-tools-panel');
 
     if (missionPanel) missionPanel.style.display = (tabName === 'misi') ? 'block' : 'none';
-    if (sandboxPanel) sandboxPanel.style.display = (tabName === 'sandbox') ? 'block' : 'none';
     if (troublePanel) troublePanel.style.display = (tabName === 'troubleshoot') ? 'block' : 'none';
+    if (sandboxPanel) sandboxPanel.style.display = (tabName === 'sandbox') ? 'block' : 'none';
+    if (jobsheetPanel) jobsheetPanel.style.display = (tabName === 'jobsheet') ? 'block' : 'none';
+
+    // Close mobile drawer on tab switch
+    this.toggleMobileSidebar(false);
 
     if (tabName === 'misi') {
       this.loadLevel(this.currentLevelIdx);
@@ -247,6 +351,9 @@ class VoltMasterApp {
       this.loadTroubleshootCase(this.currentCaseIdx);
     } else if (tabName === 'sandbox') {
       this.sandbox.loadTemplate('simple_lamp');
+    } else if (tabName === 'jobsheet') {
+      this.jobsheet.populateJobsheetSelector();
+      this.jobsheet.loadJobsheet(BUILTIN_JOBSHEETS[0].id);
     }
   }
 
@@ -270,14 +377,15 @@ class VoltMasterApp {
     this.wires = (lvl.initialWires || []).map(w => ({ ...w }));
     this.activeWireStart = null;
 
-    // Update level button active classes
+    // Update level buttons
     document.querySelectorAll('.btn-lvl').forEach((btn, idx) => {
       btn.classList.toggle('active', idx === this.currentLevelIdx);
       btn.classList.toggle('completed', !!this.progress.completedLevels[idx + 1]);
     });
 
     this.recalculate();
-    this.render();
+    this.fitToScreen();
+    this.updateChecklistUI();
   }
 
   loadTroubleshootCase(caseIdx) {
@@ -297,7 +405,7 @@ class VoltMasterApp {
     this.activeWireStart = null;
 
     this.recalculate();
-    this.render();
+    this.fitToScreen();
   }
 
   loadCircuitState(components, wires) {
@@ -305,7 +413,7 @@ class VoltMasterApp {
     this.wires = wires;
     this.activeWireStart = null;
     this.recalculate();
-    this.render();
+    this.fitToScreen();
   }
 
   addSandboxComponent(type) {
@@ -332,6 +440,8 @@ class VoltMasterApp {
       this.loadLevel(this.currentLevelIdx);
     } else if (this.currentMode === 'troubleshoot') {
       this.loadTroubleshootCase(this.currentCaseIdx);
+    } else if (this.currentMode === 'jobsheet' && this.jobsheet.activeJobsheet) {
+      this.jobsheet.loadJobsheet(this.jobsheet.activeJobsheet.id);
     }
   }
 
@@ -367,6 +477,7 @@ class VoltMasterApp {
       this.activeWireStart = null;
       this.recalculate();
       this.render();
+      this.updateChecklistUI();
     }
   }
 
@@ -374,18 +485,29 @@ class VoltMasterApp {
     this.wires.splice(wireIdx, 1);
     this.recalculate();
     this.render();
+    this.updateChecklistUI();
   }
 
   toggleComponent(compId, extraParam) {
     const comp = this.components.find(c => c.id === compId);
     if (comp) {
-      if (comp.type === 'mcb1p' || comp.type === 'mcb3p') {
+      if (comp.type === 'mcb1p' || comp.type === 'mcb3p' || comp.type === 'elcb') {
         comp.toggle();
-      } else if (comp.type === 'switch_single' || comp.type === 'switch_hotel') {
+      } else if (comp.type === 'switch_single' || comp.type === 'switch_hotel' || comp.type === 'switch_cross') {
         comp.toggle();
       } else if (comp.type === 'switch_double') {
         comp.toggleSwitch(extraParam);
       }
+      this.recalculate();
+      this.render();
+      this.updateChecklistUI();
+    }
+  }
+
+  testTripELCB(compId) {
+    const comp = this.components.find(c => c.id === compId);
+    if (comp && comp.testTrip) {
+      comp.testTrip();
       this.recalculate();
       this.render();
     }
@@ -397,6 +519,7 @@ class VoltMasterApp {
       comp.press();
       this.recalculate();
       this.render();
+      this.updateChecklistUI();
     }
   }
 
@@ -406,6 +529,7 @@ class VoltMasterApp {
       comp.release();
       this.recalculate();
       this.render();
+      this.updateChecklistUI();
     }
   }
 
@@ -422,8 +546,8 @@ class VoltMasterApp {
     const rect = this.svg.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const mouseX = clientX - rect.left;
-    const mouseY = clientY - rect.top;
+    const mouseX = (clientX - rect.left - this.panOffset.x) / this.zoomScale;
+    const mouseY = (clientY - rect.top - this.panOffset.y) / this.zoomScale;
 
     let targetX = 0, targetY = 0;
     if (targetType === 'probe_red') {
@@ -454,55 +578,6 @@ class VoltMasterApp {
     this.engine.setCircuit(this.components, this.wires);
     this.multimeter.evaluate();
     this.checkShortCircuitBanner();
-    this.updateChecklistUI();
-  }
-
-  // Evaluates live checklist and renders the step progress
-  updateChecklistUI() {
-    const container = document.getElementById('live-checklist-container');
-    if (!container) return;
-
-    if (this.currentMode !== 'misi') {
-      container.style.display = 'none';
-      return;
-    }
-
-    const lvl = GAME_LEVELS[this.currentLevelIdx];
-    if (!lvl.checklist || lvl.checklist.length === 0) {
-      container.style.display = 'none';
-      return;
-    }
-
-    container.style.display = 'block';
-
-    let doneCount = 0;
-    let html = `
-      <div class="checklist-header">
-        <span>📋 LANGKAH KERJA PRAKTIK</span>
-        <span class="checklist-counter" id="chk-counter">0/${lvl.checklist.length}</span>
-      </div>
-      <div class="checklist-items">
-    `;
-
-    lvl.checklist.forEach(item => {
-      const isDone = item.check(this.engine, this.multimeter);
-      if (isDone) doneCount++;
-      const itemClass = isDone ? 'chk-item completed' : 'chk-item pending';
-      const checkIcon = isDone ? '✅' : '⚪';
-
-      html += `
-        <div class="${itemClass}">
-          <span class="chk-icon">${checkIcon}</span>
-          <span class="chk-text">${item.text}</span>
-        </div>
-      `;
-    });
-
-    html += `</div>`;
-    container.innerHTML = html;
-
-    const counterEl = document.getElementById('chk-counter');
-    if (counterEl) counterEl.innerText = `${doneCount}/${lvl.checklist.length}`;
   }
 
   checkShortCircuitBanner() {
@@ -512,6 +587,37 @@ class VoltMasterApp {
     }
   }
 
+  updateChecklistUI() {
+    const container = document.getElementById('live-checklist-container');
+    if (!container) return;
+
+    if (this.currentMode === 'misi') {
+      const lvl = GAME_LEVELS[this.currentLevelIdx];
+      if (!lvl || !lvl.checklist) {
+        container.innerHTML = '';
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="checklist-header">
+          <span>📋 Langkah Pengerjaan (Live SOP)</span>
+        </div>
+        ${lvl.checklist.map((item) => {
+          const isDone = item.check(this.engine, this.multimeter);
+          return `
+            <div class="checklist-item ${isDone ? 'done' : ''}">
+              <div class="chk-box">${isDone ? '✓' : ''}</div>
+              <div class="chk-label">${item.text}</div>
+            </div>
+          `;
+        }).join('')}
+      `;
+    }
+  }
+
+  // -------------------------------------------------------------
+  // VERIFICATION & ASSESSMENT
+  // -------------------------------------------------------------
   verifyCircuit() {
     let result = { passed: false, feedback: "" };
 
@@ -525,7 +631,7 @@ class VoltMasterApp {
           this.saveProgress();
         }
         if (window.sound) window.sound.playSuccess();
-        this.showModal("Level Selesai! 🎉", result.feedback, true);
+        this.showModal(`Level ${lvl.id} Selesai! 🎉`, result.feedback, true);
       } else {
         this.showModal("Pemeriksaan Rangkaian", result.feedback, false);
       }
@@ -543,6 +649,13 @@ class VoltMasterApp {
       } else {
         this.showModal("Hasil Diagnosa", result.feedback, false);
       }
+    } else if (this.currentMode === 'jobsheet') {
+      if (this.engine.isShortCircuit) {
+        this.showModal("Hasil Pemeriksaan Jobsheet", "Terjadi korsleting hubung singkat! Segera periksa jalur fasa dan netral!", false);
+      } else {
+        if (window.sound) window.sound.playSuccess();
+        this.showModal("Jobsheet Selesai! 🎓", "Seluruh pengawatan berhasil dirakit dan berfungsi optimal tanpa hubung singkat. Anda dapat mencetak lembar penilaian resmi praktikum sekarang!", true);
+      }
     }
   }
 
@@ -552,13 +665,13 @@ class VoltMasterApp {
       if (this.currentLevelIdx < GAME_LEVELS.length - 1) {
         this.loadLevel(this.currentLevelIdx + 1);
       } else {
-        alert("Selamat! Kamu telah menyelesaikan semua tingkatan kejuruan!");
+        alert("Luar biasa! Anda telah menyelesaikan seluruh 16 level kejuruan!");
       }
     } else if (this.currentMode === 'troubleshoot') {
       if (this.currentCaseIdx < TROUBLESHOOTING_CASES.length - 1) {
         this.loadTroubleshootCase(this.currentCaseIdx + 1);
       } else {
-        alert("Selamat! Seluruh kasus troubleshooting berhasil dipecahkan!");
+        alert("Selamat! Semua kasus troubleshooting berhasil Anda selesaikan!");
       }
     }
   }
@@ -581,19 +694,29 @@ class VoltMasterApp {
     if (modal) modal.classList.remove('open');
   }
 
-  // Opens schematic blueprint viewer
   showSchematicModal() {
+    let schematic = null;
+    if (this.currentMode === 'misi') {
+      schematic = GAME_LEVELS[this.currentLevelIdx]?.schematic;
+    } else if (this.currentMode === 'jobsheet' && this.jobsheet.activeJobsheet) {
+      schematic = {
+        title: this.jobsheet.activeJobsheet.title,
+        desc: this.jobsheet.activeJobsheet.schematicDesc,
+        svg: this.jobsheet.activeJobsheet.schematicSVG
+      };
+    }
+
+    if (!schematic) return;
+
     const modal = document.getElementById('schematic-modal');
     const titleEl = document.getElementById('schematic-title');
     const descEl = document.getElementById('schematic-desc');
     const bodyEl = document.getElementById('schematic-body');
 
-    const lvl = GAME_LEVELS[this.currentLevelIdx];
-    if (lvl && lvl.schematic) {
-      if (titleEl) titleEl.innerText = `📐 Skema Rangkaian: ${lvl.title}`;
-      if (descEl) descEl.innerHTML = lvl.schematic.desc;
-      if (bodyEl) bodyEl.innerHTML = lvl.schematic.svg;
-    }
+    if (titleEl) titleEl.innerText = `📐 ${schematic.title}`;
+    if (descEl) descEl.innerHTML = schematic.desc;
+    if (bodyEl) bodyEl.innerHTML = schematic.svg;
+
     if (modal) modal.classList.add('open');
   }
 
@@ -602,7 +725,6 @@ class VoltMasterApp {
     if (modal) modal.classList.remove('open');
   }
 
-  // Onboarding Tutorial Modal
   showOnboardingModal() {
     const modal = document.getElementById('onboarding-modal');
     if (modal) modal.classList.add('open');
@@ -613,11 +735,41 @@ class VoltMasterApp {
     if (modal) modal.classList.remove('open');
   }
 
+  openImportJobsheetModal() {
+    const modal = document.getElementById('import-jobsheet-modal');
+    if (modal) modal.classList.add('open');
+  }
+
+  closeImportJobsheetModal() {
+    const modal = document.getElementById('import-jobsheet-modal');
+    if (modal) modal.classList.remove('open');
+  }
+
+  openPrintReportModal() {
+    const modal = document.getElementById('report-modal');
+    const container = document.getElementById('report-paper-container');
+    if (container && this.jobsheet) {
+      const studentName = document.getElementById('student-name-input')?.value || 'Siswa SMK';
+      const studentClass = document.getElementById('student-class-input')?.value || 'X TITL 1';
+      container.innerHTML = this.jobsheet.generateAssessmentReport(studentName, studentClass, 96);
+    }
+    if (modal) modal.classList.add('open');
+  }
+
+  closeReportModal() {
+    const modal = document.getElementById('report-modal');
+    if (modal) modal.classList.remove('open');
+  }
+
+  printReport() {
+    window.print();
+  }
+
   toggleFullscreen() {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(err => console.warn(err));
+      document.documentElement.requestFullscreen().catch(() => {});
     } else {
-      document.exitFullscreen().catch(err => console.warn(err));
+      if (document.exitFullscreen) document.exitFullscreen();
     }
   }
 
@@ -629,7 +781,8 @@ class VoltMasterApp {
 
     if (xpEl) xpEl.innerText = `${this.progress.totalXP} XP`;
     if (progressEl) {
-      const pct = Math.round(((completedLvlCount + completedCaseCount) / (GAME_LEVELS.length + TROUBLESHOOTING_CASES.length)) * 100);
+      const totalItems = GAME_LEVELS.length + TROUBLESHOOTING_CASES.length;
+      const pct = Math.round(((completedLvlCount + completedCaseCount) / totalItems) * 100);
       progressEl.innerText = `${pct}% Selesai`;
     }
   }
@@ -642,17 +795,20 @@ class VoltMasterApp {
 
     let svgHtml = '';
 
-    // 1. Grid Background
+    // 1. Grid Background (Always fills canvas)
     svgHtml += `
       <defs>
         <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
-          <circle cx="2" cy="2" r="1.2" fill="#334155" opacity="0.65"/>
+          <circle cx="2" cy="2" r="1.2" fill="#334155" opacity="0.6"/>
         </pattern>
       </defs>
-      <rect width="100%" height="100%" fill="url(#grid)" />
+      <rect width="100%" height="100%" fill="url(#grid)" style="cursor:${this.isCanvasPanning ? 'grabbing' : 'grab'};"/>
     `;
 
-    // 2. Render Existing Wires (Bézier curves for realistic panel cabling)
+    // 2. Viewport Transform Group (Scales & Pans all elements)
+    svgHtml += `<g id="viewport-group" transform="translate(${this.panOffset.x}, ${this.panOffset.y}) scale(${this.zoomScale})">`;
+
+    // 2A. Render Existing Wires (Bézier curves for realistic panel cabling)
     this.wires.forEach((wire, idx) => {
       let p1 = null, p2 = null;
       for (const comp of this.components) {
@@ -671,15 +827,13 @@ class VoltMasterApp {
 
         const pathData = `M ${p1.x} ${p1.y} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
 
-        // Check if wire carries active current (animated dashes)
-        const potFrom = this.engine.getPinPotential(wire.from);
-        const potTo = this.engine.getPinPotential(wire.to);
-        const isCurrentFlowing = (potFrom.type === 'AC' && potFrom.v >= 100) || (potTo.type === 'AC' && potTo.v >= 100);
+        // Check if wire carries active current (animated dashed particle flow)
+        const isCurrentFlowing = this.engine.isWireEnergized(wire);
 
         svgHtml += `
-          <g class="wire-group" onclick="app.deleteWire(${idx})" style="cursor:pointer;" title="Klik untuk menghapus kabel">
-            <!-- Fat invisible stroke for easy clicking -->
-            <path d="${pathData}" fill="none" stroke="transparent" stroke-width="16"/>
+          <g class="wire-group ${isCurrentFlowing ? 'wire-energized' : ''}" onclick="app.deleteWire(${idx})" style="cursor:pointer;" title="Klik untuk menghapus kabel ini">
+            <!-- Fat invisible stroke for easy clicking on touch & mouse -->
+            <path d="${pathData}" fill="none" stroke="transparent" stroke-width="18"/>
             <!-- Outline shadow -->
             <path d="${pathData}" fill="none" stroke="#000" stroke-width="7" opacity="0.45"/>
             <!-- Main Wire -->
@@ -693,7 +847,7 @@ class VoltMasterApp {
       }
     });
 
-    // 3. Render In-Progress Wire
+    // 2B. Render In-Progress Wire
     if (this.activeWireStart) {
       let p1 = null;
       for (const comp of this.components) {
@@ -723,25 +877,18 @@ class VoltMasterApp {
       }
     }
 
-    // 4. Render Components
+    // 2C. Render Components
     this.components.forEach(comp => {
       svgHtml += comp.renderSVG();
     });
 
-    // 5. Render Multimeter Probes & Tespen
+    // 2D. Render Multimeter Probes & Tespen
     svgHtml += this.multimeter.renderProbesSVG();
 
-    this.svg.innerHTML = svgHtml;
+    // Close Viewport Group
+    svgHtml += `</g>`;
 
-    // Click empty SVG space to cancel active wire in progress
-    this.svg.onmousedown = (e) => {
-      if (e.target === this.svg || (e.target.tagName === 'rect' && e.target.getAttribute('fill') === 'url(#grid)')) {
-        if (this.activeWireStart) {
-          this.activeWireStart = null;
-          this.render();
-        }
-      }
-    };
+    this.svg.innerHTML = svgHtml;
 
     // Attach pin click handlers dynamically
     this.components.forEach(comp => {
@@ -755,11 +902,11 @@ class VoltMasterApp {
         }
       });
 
-      // Sandbox draggable components
+      // Draggable components in sandbox and jobsheet
       const compEl = document.getElementById(`comp_${comp.id}`);
-      if (compEl && this.currentMode === 'sandbox') {
+      if (compEl && (this.currentMode === 'sandbox' || this.currentMode === 'jobsheet')) {
         compEl.style.cursor = 'move';
-        compEl.addEventListener('mousedown', (e) => {
+        compEl.addEventListener('pointerdown', (e) => {
           if (e.target.closest('.pin-terminal') || e.target.closest('.mcb-lever') || e.target.tagName === 'circle') return;
           this.startDragging('component', comp.id, e);
         });
@@ -769,20 +916,17 @@ class VoltMasterApp {
     // Attach probe dragging handlers
     const probeRedEl = document.getElementById('probe_red');
     if (probeRedEl) {
-      probeRedEl.addEventListener('mousedown', (e) => this.startDragging('probe_red', null, e));
-      probeRedEl.addEventListener('touchstart', (e) => this.startDragging('probe_red', null, e));
+      probeRedEl.addEventListener('pointerdown', (e) => this.startDragging('probe_red', null, e));
     }
 
     const probeBlackEl = document.getElementById('probe_black');
     if (probeBlackEl) {
-      probeBlackEl.addEventListener('mousedown', (e) => this.startDragging('probe_black', null, e));
-      probeBlackEl.addEventListener('touchstart', (e) => this.startDragging('probe_black', null, e));
+      probeBlackEl.addEventListener('pointerdown', (e) => this.startDragging('probe_black', null, e));
     }
 
     const tespenEl = document.getElementById('tespen_tool');
     if (tespenEl) {
-      tespenEl.addEventListener('mousedown', (e) => this.startDragging('tespen', null, e));
-      tespenEl.addEventListener('touchstart', (e) => this.startDragging('tespen', null, e));
+      tespenEl.addEventListener('pointerdown', (e) => this.startDragging('tespen', null, e));
     }
   }
 }

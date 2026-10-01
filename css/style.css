@@ -786,3 +786,442 @@ body {
   color: #94a3b8;
   line-height: 1.4;
 }
+
+/* FLOATING CANVAS VIEW CONTROLS (PAN & ZOOM) */
+.canvas-view-controls {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  background: rgba(12, 20, 39, 0.88);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 5px 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 12;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+}
+
+.canvas-btn {
+  background: var(--bg-tertiary);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.canvas-btn:hover {
+  background: var(--accent-blue);
+  border-color: var(--accent-cyan);
+  color: #fff;
+  transform: scale(1.06);
+}
+
+.canvas-zoom-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  min-width: 44px;
+  text-align: center;
+  font-family: monospace;
+}
+
+/* MOBILE TOGGLE & BUTTON MODES */
+.mobile-sidebar-toggle {
+  display: none;
+}
+
+#btn-tv-mode.active {
+  background: #10b981;
+  color: #ffffff;
+  border-color: #34d399;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
+}
+
+/* WIRE ENERGIZED GLOW */
+.wire-energized {
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.55));
+}
+
+/* DMM MINIMIZE & COMPACT HUD */
+.dmm-min-btn {
+  background: var(--bg-tertiary);
+  color: #94a3b8;
+  border: 1px solid #334a75;
+  border-radius: 4px;
+  width: 20px;
+  height: 20px;
+  font-size: 0.72rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: all 0.15s;
+}
+
+.dmm-min-btn:hover {
+  background: var(--accent-blue);
+  color: #fff;
+  border-color: var(--accent-cyan);
+}
+
+.multimeter-panel.minimized {
+  width: 220px;
+  padding: 8px 12px;
+}
+
+.multimeter-panel.minimized .dmm-screen,
+.multimeter-panel.minimized .dmm-knob-container,
+.multimeter-panel.minimized .dmm-probes-info,
+.multimeter-panel.minimized .dmm-footer {
+  display: none;
+}
+
+/* JOBSHEET & CHECKLIST ENHANCEMENTS */
+.jobsheet-list {
+  margin-left: 20px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: #cbd5e1;
+  margin-bottom: 8px;
+}
+
+.jobsheet-list li {
+  margin-bottom: 4px;
+}
+
+.checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.76rem;
+  padding: 6px 8px;
+  border-radius: 5px;
+  background: #111a2e;
+  border: 1px solid #1e2c4a;
+  transition: all 0.2s ease;
+  color: #cbd5e1;
+  margin-bottom: 4px;
+}
+
+.checklist-item.done {
+  background: rgba(34, 197, 94, 0.14);
+  border-color: rgba(34, 197, 94, 0.45);
+  color: #86efac;
+}
+
+.chk-box {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1px solid var(--accent-cyan);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--accent-green);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.checklist-item.done .chk-box {
+  background: rgba(34, 197, 94, 0.3);
+  border-color: var(--accent-green);
+}
+
+.chk-label {
+  line-height: 1.35;
+}
+
+/* TV INTERACTIVE PANEL & SMART BOARD MODE */
+body.tv-mode {
+  font-size: 17px;
+}
+
+body.tv-mode .navbar {
+  padding: 12px 22px;
+}
+
+body.tv-mode .brand-title {
+  font-size: 1.45rem;
+}
+
+body.tv-mode .nav-tab {
+  font-size: 1rem;
+  padding: 10px 18px;
+}
+
+body.tv-mode .sidebar {
+  width: 410px;
+}
+
+body.tv-mode .mission-title {
+  font-size: 1.3rem;
+}
+
+body.tv-mode .mission-objective {
+  font-size: 0.94rem;
+  line-height: 1.5;
+}
+
+body.tv-mode .chk-item,
+body.tv-mode .checklist-item {
+  font-size: 0.92rem;
+  padding: 8px 12px;
+}
+
+body.tv-mode .btn {
+  font-size: 0.98rem;
+  padding: 10px 20px;
+}
+
+body.tv-mode .canvas-btn {
+  width: 42px;
+  height: 42px;
+  font-size: 1.2rem;
+}
+
+body.tv-mode .canvas-zoom-label {
+  font-size: 0.95rem;
+  min-width: 52px;
+}
+
+body.tv-mode .multimeter-panel {
+  width: 290px;
+  padding: 16px;
+}
+
+body.tv-mode .dmm-value {
+  font-size: 2.2rem;
+}
+
+body.tv-mode .wire-color-swatch {
+  width: 38px;
+  height: 38px;
+  font-size: 12px;
+}
+
+/* MOBILE RESPONSIVE ADAPTATION */
+@media (max-width: 900px) {
+  .mobile-sidebar-toggle {
+    display: inline-flex !important;
+  }
+
+  .nav-tabs {
+    overflow-x: auto;
+    max-width: 45vw;
+    white-space: nowrap;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .nav-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .user-stats .stat-pill {
+    display: none;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 60px;
+    left: 0;
+    bottom: 0;
+    width: 330px;
+    max-width: 88vw;
+    background: var(--bg-secondary);
+    box-shadow: 6px 0 24px rgba(0, 0, 0, 0.85);
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 45;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .multimeter-panel {
+    bottom: 12px;
+    right: 12px;
+    transform: scale(0.9);
+    transform-origin: bottom right;
+  }
+
+  .canvas-view-controls {
+    bottom: 12px;
+    left: 12px;
+  }
+}
+
+/* OFFICIAL VOCATIONAL ASSESSMENT REPORT (PREVIEW & PRINT) */
+.report-paper {
+  background: #ffffff;
+  color: #1e293b;
+  padding: 28px 32px;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  font-family: 'Times New Roman', Times, serif;
+}
+
+.report-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.report-emblem {
+  font-size: 2.5rem;
+  width: 56px;
+  height: 56px;
+  background: #0284c7;
+  color: #fff;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.report-title-main {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #0f172a;
+  text-transform: uppercase;
+}
+
+.report-title-sub {
+  font-size: 0.85rem;
+  color: #475569;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.report-divider {
+  border: none;
+  border-top: 2px solid #0f172a;
+  border-bottom: 1px solid #0f172a;
+  height: 4px;
+  margin: 12px 0 16px 0;
+}
+
+.report-meta-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  margin-bottom: 16px;
+}
+
+.report-meta-table td {
+  padding: 4px 6px;
+  color: #1e293b;
+}
+
+.report-section-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 14px 0 6px 0;
+  border-bottom: 1.5px solid #cbd5e1;
+  padding-bottom: 3px;
+}
+
+.report-score-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+  font-size: 0.85rem;
+}
+
+.report-score-table th,
+.report-score-table td {
+  border: 1px solid #64748b;
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.report-score-table th {
+  background: #f1f5f9;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.report-score-table td:first-child,
+.report-score-table td:nth-child(3),
+.report-score-table td:nth-child(4),
+.report-score-table td:nth-child(5) {
+  text-align: center;
+}
+
+.status-pass {
+  color: #15803d;
+  font-weight: bold;
+}
+
+.report-signature-block {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 36px;
+  padding: 0 20px;
+}
+
+.sig-box {
+  text-align: center;
+  font-size: 0.88rem;
+  color: #1e293b;
+}
+
+/* PRINT MEDIA QUERY FOR PRINTING ASSESSMENT SHEET */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #report-modal,
+  #report-paper-container,
+  #report-paper-container * {
+    visibility: visible;
+  }
+
+  #report-modal {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: auto;
+    background: #fff !important;
+    display: block !important;
+    padding: 0 !important;
+  }
+
+  .modal-content {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    background: #fff !important;
+  }
+
+  .modal-content > div:first-child,
+  .modal-content > div:nth-child(2) {
+    display: none !important;
+  }
+
+  .report-paper {
+    box-shadow: none !important;
+    padding: 20px 0 !important;
+    border-radius: 0 !important;
+  }
+}

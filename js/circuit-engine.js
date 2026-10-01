@@ -181,11 +181,11 @@ class CircuitEngine {
     return stateChanged;
   }
 
-  // Find and trip MCB when short-circuit occurs
+  // Find and trip MCB / ELCB when short-circuit occurs
   tripProtectiveMCBs() {
     let trippedAny = false;
     this.components.forEach(comp => {
-      if ((comp.type === 'mcb1p' || comp.type === 'mcb3p' || comp.type === 'mcb_pln') && comp.state.isOn) {
+      if ((comp.type === 'mcb1p' || comp.type === 'mcb3p' || comp.type === 'mcb_pln' || comp.type === 'elcb') && comp.state.isOn) {
         comp.state.isOn = false;
         comp.state.tripped = true;
         trippedAny = true;
@@ -195,6 +195,20 @@ class CircuitEngine {
     if (trippedAny && window.sound) {
       window.sound.playMcbTrip();
     }
+  }
+
+  // Check if a wire is currently carrying active electric current
+  isWireEnergized(wire) {
+    if (!this.pinToNetMap || !this.resolvedNetPotentials) return false;
+    const netIdx = this.pinToNetMap.get(wire.from);
+    if (netIdx === undefined) return false;
+    const pot = this.resolvedNetPotentials.get(netIdx);
+    if (!pot || pot.v === 0) return false;
+
+    const hasWorkingLoad = this.components.some(c => 
+      (c.state && (c.state.isLit || c.state.isRunning || c.state.isEnergized || c.state.isPowered))
+    );
+    return hasWorkingLoad;
   }
 
   // Get electrical potential of a specific pin
