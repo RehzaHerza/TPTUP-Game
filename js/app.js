@@ -72,6 +72,14 @@ class VoltMasterApp {
     this.jobsheet = new JobsheetManager(this);
     this.multimeter = new MultimeterTool(document.getElementById('workbench-container'));
 
+    // FIX: sinkronkan tinggi navbar -> CSS var --nav-h (dipakai sidebar mobile)
+    const syncNavHeight = () => {
+      const nav = document.querySelector('.navbar');
+      if (nav) document.documentElement.style.setProperty('--nav-h', nav.offsetHeight + 'px');
+    };
+    syncNavHeight();
+    window.addEventListener('resize', syncNavHeight);
+
     this.setupEventListeners();
     this.loadLevel(0);
     this.updateStatsUI();
@@ -445,10 +453,19 @@ class VoltMasterApp {
       this.loadTroubleshootCase(this.currentCaseIdx);
     } else if (this.currentMode === 'jobsheet' && this.jobsheet.activeJobsheet) {
       this.jobsheet.loadJobsheet(this.jobsheet.activeJobsheet.id);
+    } else if (this.currentMode === 'sandbox') {
+      // FIX: Reset di mode Sandbox sebelumnya tidak melakukan apa-apa
+      this.sandbox.loadTemplate(this.lastSandboxTemplate || 'simple_lamp');
     }
   }
 
   undoWire() {
+    // FIX: batalkan kabel yang sedang ditarik terlebih dahulu
+    if (this.activeWireStart) {
+      this.activeWireStart = null;
+      this.render();
+      return;
+    }
     if (this.wires.length > 0) {
       this.wires.pop();
       this.recalculate();

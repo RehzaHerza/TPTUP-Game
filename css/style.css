@@ -31,7 +31,9 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-main);
   font-family: var(--font-family);
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh; /* FIX: tinggi akurat di HP/tablet/TV Android */
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -39,6 +41,7 @@ body {
 
 /* TOP NAVBAR */
 .navbar {
+  flex-shrink: 0; /* FIX: navbar tidak boleh mengecil / mendorong layout */
   background-color: var(--bg-secondary);
   border-bottom: 2px solid var(--border-color);
   padding: 8px 18px;
@@ -147,13 +150,14 @@ body {
 .main-wrapper {
   display: flex;
   flex: 1;
-  height: calc(100vh - 60px);
+  min-height: 0; /* FIX: sisa tinggi otomatis, tidak lagi dikunci 60px */
   position: relative;
   overflow: hidden;
 }
 
 /* SIDEBAR CONTROLS */
 .sidebar {
+  min-height: 0;
   width: 350px;
   background-color: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
@@ -176,7 +180,7 @@ body {
   flex-shrink: 0;
   background: var(--bg-secondary);
   border-top: 2px solid var(--border-color);
-  padding: 12px 14px;
+  padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px));
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4);
   z-index: 2;
 }
@@ -1059,7 +1063,7 @@ body.tv-mode .wire-color-swatch {
 
   .sidebar {
     position: fixed;
-    top: 60px;
+    top: var(--nav-h, 60px); /* FIX: mengikuti tinggi navbar sebenarnya */
     left: 0;
     bottom: 0;
     width: 330px;

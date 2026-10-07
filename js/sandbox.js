@@ -10,6 +10,7 @@ class SandboxManager {
 
   // Pre-configured templates for quick classroom demonstration
   loadTemplate(templateKey) {
+    this.app.lastSandboxTemplate = templateKey; // FIX: diingat untuk tombol Reset
     let components = [];
     let wires = [];
 
