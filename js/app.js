@@ -91,8 +91,9 @@ class VoltMasterApp {
 
     const getSVGCoords = (e) => {
       const rect = this.svg.getBoundingClientRect();
-      const clientX = e.touches ? e.touches[0].clientX : (e.clientX !== undefined ? e.clientX : 0);
-      const clientY = e.touches ? e.touches[0].clientY : (e.clientY !== undefined ? e.clientY : 0);
+      // Menyatukan pembacaan koordinat dari Mouse, Touchscreen, atau Stylus (Pointer Events API)
+      const clientX = e.clientX;
+      const clientY = e.clientY;
       return {
         x: (clientX - rect.left - this.panOffset.x) / this.zoomScale,
         y: (clientY - rect.top - this.panOffset.y) / this.zoomScale,
@@ -103,15 +104,21 @@ class VoltMasterApp {
 
     // Canvas Background Drag for Panning (Empty space drag)
     this.svg.addEventListener('pointerdown', (e) => {
-      // Check if clicked directly on SVG or grid rect
       const isBg = e.target === this.svg || (e.target.tagName === 'rect' && e.target.getAttribute('fill') === 'url(#grid)');
       if (isBg && !this.activeWireStart && !this.draggingTarget) {
+        if (e.cancelable) e.preventDefault(); // Kunci untuk Touchscreen Android TV
         this.isCanvasPanning = true;
         this.panStartPos = { x: e.clientX - this.panOffset.x, y: e.clientY - this.panOffset.y };
+        try { this.svg.setPointerCapture(e.pointerId); } catch(err){}
       }
-    });
+    }, { passive: false });
 
     container.addEventListener('pointermove', (e) => {
+      // Hanya aktifkan preventDefault jika kita sedang menyeret sesuatu (mencegah scroll di TV Android)
+      if (this.isCanvasPanning || this.draggingTarget) {
+        if (e.cancelable) e.preventDefault();
+      }
+
       const coords = getSVGCoords(e);
       this.mousePos = { x: coords.x, y: coords.y };
 
@@ -161,11 +168,13 @@ class VoltMasterApp {
       if (this.activeWireStart) {
         this.render();
       }
-    });
+    }, { passive: false });
 
-    window.addEventListener('pointerup', () => {
+    // Handle pelepasan pointer (mouse dilepas / jari diangkat)
+    const handlePointerUp = (e) => {
       this.draggingTarget = null;
       this.isCanvasPanning = false;
+      try { this.svg.releasePointerCapture(e.pointerId); } catch(err){}
 
       let anyReleased = false;
       this.components.forEach(c => {
@@ -178,12 +187,15 @@ class VoltMasterApp {
         this.recalculate();
         this.render();
       }
-    });
+    };
+
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerUp); // Penting untuk TV & Stylus jika interupsi sistem muncul
 
     // Touch Pinch-to-Zoom Support for Tablets & TV Interactive Panels
     container.addEventListener('touchmove', (e) => {
       if (e.touches && e.touches.length === 2) {
-        e.preventDefault();
+        if (e.cancelable) e.preventDefault(); // Matikan zoom default Android
         const dist = Math.hypot(
           e.touches[0].clientX - e.touches[1].clientX,
           e.touches[0].clientY - e.touches[1].clientY
@@ -204,15 +216,6 @@ class VoltMasterApp {
       if (!e.touches || e.touches.length < 2) {
         this.pinchDist = null;
       }
-    });
-
-    // PUIL color selector buttons
-    document.querySelectorAll('.wire-color-swatch').forEach(el => {
-      el.addEventListener('click', () => {
-        document.querySelectorAll('.wire-color-swatch').forEach(s => s.classList.remove('active'));
-        el.classList.add('active');
-        this.selectedWireColor = el.dataset.color;
-      });
     });
   }
 
@@ -543,11 +546,15 @@ class VoltMasterApp {
   }
 
   startDragging(targetType, id, e) {
+    if (e.cancelable) e.preventDefault(); // Hentikan gestur sentuh lain saat mulai drag
+    
+    // Pointer capture agar jari tidak lepas dari komponen saat digeser cepat
+    try { e.target.setPointerCapture(e.pointerId); } catch(err){}
+    
     const rect = this.svg.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const clientX = e.clientX; // PointerEvent otomatis menyatukan koordinat
+    const clientY = e.clientY;
     const mouseX = (clientX - rect.left - this.panOffset.x) / this.zoomScale;
-    const mouseY = (clientY - rect.top - this.panOffset.y) / this.zoomScale;
 
     let targetX = 0, targetY = 0;
     if (targetType === 'probe_red') {

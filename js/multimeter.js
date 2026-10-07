@@ -86,6 +86,72 @@ class MultimeterTool {
 
     this.updateDialAngle();
     this.updateDisplay();
+    this.initDrag();
+  }
+
+  // -----------------------------------------------------------------
+  // DRAGGABLE PANEL: lets user move the multimeter anywhere on screen
+  // -----------------------------------------------------------------
+  initDrag() {
+    const panel = document.getElementById('multimeter-hud');
+    const handle = document.getElementById('dmm-drag-handle');
+    if (!panel || !handle) return;
+
+    let isDragging = false;
+    let startX = 0, startY = 0;
+    let currentLeft = null, currentTop = null;
+
+    const onMoveStart = (e) => {
+      if (e.target.tagName === 'BUTTON' || e.target.tagName === 'SELECT') return;
+      isDragging = true;
+      handle.style.cursor = 'grabbing';
+
+      const rect = panel.getBoundingClientRect();
+      if (!panel.style.left) {
+        panel.style.left = rect.left + 'px';
+        panel.style.top = rect.top + 'px';
+        panel.style.right = 'auto';
+        panel.style.bottom = 'auto';
+      }
+      currentLeft = parseInt(panel.style.left, 10) || rect.left;
+      currentTop = parseInt(panel.style.top, 10) || rect.top;
+
+      startX = e.touches ? e.touches[0].clientX : e.clientX;
+      startY = e.touches ? e.touches[0].clientY : e.clientY;
+      e.preventDefault();
+    };
+
+    const onMove = (e) => {
+      if (!isDragging) return;
+      const cx = e.touches ? e.touches[0].clientX : e.clientX;
+      const cy = e.touches ? e.touches[0].clientY : e.clientY;
+      currentLeft += cx - startX;
+      currentTop += cy - startY;
+      startX = cx;
+      startY = cy;
+
+      // Keep within viewport
+      const vpW = window.innerWidth;
+      const vpH = window.innerHeight;
+      currentLeft = Math.max(0, Math.min(vpW - panel.offsetWidth, currentLeft));
+      currentTop = Math.max(0, Math.min(vpH - panel.offsetHeight, currentTop));
+
+      panel.style.left = currentLeft + 'px';
+      panel.style.top = currentTop + 'px';
+    };
+
+    const onMoveEnd = () => {
+      if (!isDragging) return;
+      isDragging = false;
+      handle.style.cursor = 'grab';
+    };
+
+    handle.addEventListener('mousedown', onMoveStart);
+    handle.addEventListener('touchstart', onMoveStart, { passive: false });
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('mouseup', onMoveEnd);
+    document.addEventListener('touchend', onMoveEnd);
   }
 
   setMode(newMode) {

@@ -61,189 +61,194 @@
     
     <!-- LEFT SIDEBAR: Instructions, Live Checklist & Component Selector -->
     <aside class="sidebar">
-      
-      <!-- 1. MISI PANEL (Active in 'misi' mode) -->
-      <div id="mission-info-panel">
-        <div class="sidebar-section">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span class="mission-badge" id="mission-badge">Dasar & K3 • Mudah</span>
-            <button class="btn btn-sm btn-amber" onclick="app.showSchematicModal()" style="font-size:0.72rem; padding:3px 8px;">
-              💡 Intip Skema (SOP)
-            </button>
-          </div>
-          <h2 class="mission-title" id="mission-title">Level 1: K3 Listrik & Penggunaan Tespen</h2>
-          <div class="mission-objective" id="mission-objective">
-            Tugas akan dimuat di sini...
+
+      <!-- SCROLLABLE CONTENT -->
+      <div class="sidebar-scroll-area">
+
+        <!-- 1. MISI PANEL (Active in 'misi' mode) -->
+        <div id="mission-info-panel">
+          <div class="sidebar-section">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span class="mission-badge" id="mission-badge">Dasar &amp; K3 • Mudah</span>
+              <button class="btn btn-sm btn-amber" onclick="app.showSchematicModal()" style="font-size:0.72rem; padding:3px 8px;">
+                💡 Intip Skema (SOP)
+              </button>
+            </div>
+            <h2 class="mission-title" id="mission-title">Level 1: K3 Listrik &amp; Penggunaan Tespen</h2>
+            <div class="mission-objective" id="mission-objective">
+              Tugas akan dimuat di sini...
+            </div>
+
+            <!-- LIVE STEP-BY-STEP CHECKLIST -->
+            <div id="live-checklist-container" class="checklist-container">
+              <!-- Populated live by app.updateChecklistUI() -->
+            </div>
+            
+            <div class="section-title" style="margin-top:12px;">📘 Teori Singkat Kejuruan</div>
+            <div class="mission-theory-box" id="mission-theory">
+              Materi kejuruan akan dimuat di sini...
+            </div>
           </div>
 
-          <!-- LIVE STEP-BY-STEP CHECKLIST -->
-          <div id="live-checklist-container" class="checklist-container">
-            <!-- Populated live by app.updateChecklistUI() -->
-          </div>
-          
-          <div class="section-title" style="margin-top:12px;">📘 Teori Singkat Kejuruan</div>
-          <div class="mission-theory-box" id="mission-theory">
-            Materi kejuruan akan dimuat di sini...
-          </div>
-        </div>
-
-        <div class="sidebar-section">
-          <div class="section-title">Pilih Level Pelatihan (16 Level)</div>
-          <div class="level-navigation">
-            <button class="btn-lvl" onclick="app.loadLevel(0)">Lvl 1</button>
-            <button class="btn-lvl" onclick="app.loadLevel(1)">Lvl 2</button>
-            <button class="btn-lvl" onclick="app.loadLevel(2)">Lvl 3</button>
-            <button class="btn-lvl" onclick="app.loadLevel(3)">Lvl 4</button>
-            <button class="btn-lvl" onclick="app.loadLevel(4)">Lvl 5</button>
-            <button class="btn-lvl" onclick="app.loadLevel(5)">Lvl 6</button>
-            <button class="btn-lvl" onclick="app.loadLevel(6)">Lvl 7</button>
-            <button class="btn-lvl" onclick="app.loadLevel(7)">Lvl 8</button>
-            <button class="btn-lvl" onclick="app.loadLevel(8)">Lvl 9</button>
-            <button class="btn-lvl" onclick="app.loadLevel(9)">Lvl 10</button>
-            <button class="btn-lvl" onclick="app.loadLevel(10)">Lvl 11</button>
-            <button class="btn-lvl" onclick="app.loadLevel(11)">Lvl 12</button>
-            <button class="btn-lvl" onclick="app.loadLevel(12)">Lvl 13</button>
-            <button class="btn-lvl" onclick="app.loadLevel(13)">Lvl 14</button>
-            <button class="btn-lvl" onclick="app.loadLevel(14)">Lvl 15</button>
-            <button class="btn-lvl" onclick="app.loadLevel(15)">Lvl 16</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 2. JOBSHEET & MODUL PANEL (Active in 'jobsheet' mode) -->
-      <div id="jobsheet-tools-panel" style="display:none;">
-        <div class="sidebar-section">
-          <div class="section-title">📑 Katalog Modul & Jobsheet SMK</div>
-          <select id="jobsheet-selector" class="dmm-select" onchange="app.jobsheet.loadJobsheet(this.value)">
-            <!-- Populated dynamically -->
-          </select>
-          
-          <div style="display:flex; gap:6px; margin-top:8px;">
-            <button class="btn btn-sm btn-outline" style="flex:1;" onclick="app.openImportJobsheetModal()" title="Impor Jobsheet dari Berkas JSON atau Teks">
-              📥 Impor
-            </button>
-            <button class="btn btn-sm btn-outline" style="flex:1;" onclick="app.jobsheet.exportCurrentAsJobsheet()" title="Simpan Rangkaian Aktif sebagai Berkas Jobsheet Baru">
-              📤 Ekspor
-            </button>
+          <div class="sidebar-section">
+            <div class="section-title">Pilih Level Pelatihan (16 Level)</div>
+            <div class="level-navigation">
+              <button class="btn-lvl" onclick="app.loadLevel(0)">Lvl 1</button>
+              <button class="btn-lvl" onclick="app.loadLevel(1)">Lvl 2</button>
+              <button class="btn-lvl" onclick="app.loadLevel(2)">Lvl 3</button>
+              <button class="btn-lvl" onclick="app.loadLevel(3)">Lvl 4</button>
+              <button class="btn-lvl" onclick="app.loadLevel(4)">Lvl 5</button>
+              <button class="btn-lvl" onclick="app.loadLevel(5)">Lvl 6</button>
+              <button class="btn-lvl" onclick="app.loadLevel(6)">Lvl 7</button>
+              <button class="btn-lvl" onclick="app.loadLevel(7)">Lvl 8</button>
+              <button class="btn-lvl" onclick="app.loadLevel(8)">Lvl 9</button>
+              <button class="btn-lvl" onclick="app.loadLevel(9)">Lvl 10</button>
+              <button class="btn-lvl" onclick="app.loadLevel(10)">Lvl 11</button>
+              <button class="btn-lvl" onclick="app.loadLevel(11)">Lvl 12</button>
+              <button class="btn-lvl" onclick="app.loadLevel(12)">Lvl 13</button>
+              <button class="btn-lvl" onclick="app.loadLevel(13)">Lvl 14</button>
+              <button class="btn-lvl" onclick="app.loadLevel(14)">Lvl 15</button>
+              <button class="btn-lvl" onclick="app.loadLevel(15)">Lvl 16</button>
+            </div>
           </div>
         </div>
 
+        <!-- 2. JOBSHEET & MODUL PANEL (Active in 'jobsheet' mode) -->
+        <div id="jobsheet-tools-panel" style="display:none;">
+          <div class="sidebar-section">
+            <div class="section-title">📑 Katalog Modul &amp; Jobsheet SMK</div>
+            <select id="jobsheet-selector" class="dmm-select" onchange="app.jobsheet.loadJobsheet(this.value)">
+              <!-- Populated dynamically -->
+            </select>
+            
+            <div style="display:flex; gap:6px; margin-top:8px;">
+              <button class="btn btn-sm btn-outline" style="flex:1;" onclick="app.openImportJobsheetModal()" title="Impor Jobsheet dari Berkas JSON atau Teks">
+                📥 Impor
+              </button>
+              <button class="btn btn-sm btn-outline" style="flex:1;" onclick="app.jobsheet.exportCurrentAsJobsheet()" title="Simpan Rangkaian Aktif sebagai Berkas Jobsheet Baru">
+                📤 Ekspor
+              </button>
+            </div>
+          </div>
+
+          <div class="sidebar-section">
+            <span class="mission-badge" id="jobsheet-badge" style="border-color:#10b981; color:#10b981;">Jobsheet Kejuruan</span>
+            <h2 class="mission-title" id="jobsheet-title">Jobsheet Praktik</h2>
+            
+            <div class="section-title">🎯 Tujuan Praktik (Capaian Kompetensi)</div>
+            <ul class="jobsheet-list" id="jobsheet-objectives"></ul>
+
+            <div class="section-title" style="margin-top:10px;">📋 Langkah Kerja (SOP)</div>
+            <div id="jobsheet-steps" class="checklist-container"></div>
+
+            <div class="section-title" style="margin-top:10px;">⚠️ Peringatan K3 Keselamatan Kerja</div>
+            <ul class="jobsheet-list" id="jobsheet-safety" style="color:#fdba74;"></ul>
+
+            <button class="btn btn-sm btn-primary" style="width:100%; margin-top:14px;" onclick="app.openPrintReportModal()">
+              🖨️ Cetak Lembar Penilaian / Laporan PDF
+            </button>
+          </div>
+        </div>
+
+        <!-- 3. TROUBLESHOOTING PANEL (Active in 'troubleshoot' mode) -->
+        <div id="troubleshoot-tools-panel" style="display:none;">
+          <div class="sidebar-section">
+            <span class="mission-badge" style="border-color:#f59e0b; color:#f59e0b;">Uji Kompetensi Kejuruan (UKK)</span>
+            <h2 class="mission-title" id="trouble-title">Kasus 1</h2>
+            <div class="mission-objective" id="trouble-scenario">Skenario kerusakan...</div>
+            
+            <div class="section-title">💡 Petunjuk Diagnosa</div>
+            <div class="mission-theory-box" id="trouble-hint">Petunjuk...</div>
+          </div>
+
+          <div class="sidebar-section">
+            <div class="section-title">Pilih Kasus Gangguan Lapangan</div>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <button class="btn btn-outline btn-sm" onclick="app.loadTroubleshootCase(0)">Kasus 1: Lampu Putus Jalur</button>
+              <button class="btn btn-outline btn-sm" onclick="app.loadTroubleshootCase(1)">Kasus 2: MCB Trip / Korslet</button>
+              <button class="btn btn-outline btn-sm" onclick="app.loadTroubleshootCase(2)">Kasus 3: Bodi Nyengat (Grounding)</button>
+              <button class="btn btn-outline btn-sm" onclick="app.loadTroubleshootCase(3)">Kasus 4: Motor 3 Fasa Hilang Fasa</button>
+              <button class="btn btn-outline btn-sm" onclick="app.loadTroubleshootCase(4)">Kasus 5: Kontak Pengunci Lepas</button>
+              <button class="btn btn-outline btn-sm" onclick="app.loadTroubleshootCase(5)">Kasus 6: Fasa Terbalik ke Arde</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. SANDBOX TOOLS PANEL (Active in 'sandbox' mode) -->
+        <div id="sandbox-tools-panel" style="display:none;">
+          <div class="sidebar-section">
+            <div class="section-title">📦 Template Rangkaian Siap Uji</div>
+            <select class="dmm-select" onchange="app.sandbox.loadTemplate(this.value)">
+              <option value="simple_lamp">1. Lampu &amp; Sakelar Tunggal</option>
+              <option value="double_lamp">2. Sakelar Ganda (2 Lampu)</option>
+              <option value="outlet_grounding">3. Stop Kontak + Grounding</option>
+              <option value="kwh_app">4. APP PLN &amp; KWH Meter</option>
+              <option value="motor_3phase">5. Penggerak Motor 3 Fasa</option>
+            </select>
+          </div>
+
+          <div class="sidebar-section">
+            <div class="section-title">➕ Tambah Komponen ke Meja</div>
+            <div class="toolbox-grid">
+              <div class="toolbox-card" onclick="app.addSandboxComponent('pln1p')">PLN 1P (220V)</div>
+              <div class="toolbox-card" onclick="app.addSandboxComponent('pln3p')">PLN 3P (380V)</div>
+              <div class="toolbox-card" onclick="app.addSandboxComponent('battery')">Baterai DC 12V</div>
+              <div class="toolbox-card" onclick="app.addSandboxComponent('mcb1p')">MCB 1-Fasa</div>
+              <div class="toolbox-card" onclick="app.addSandboxComponent('mcb3p')">MCB 3-Fasa</div>
+              <div class="toolbox-card" onclick="app.addSandboxComponent('elcb')">ELCB 30mA</div>
+              <div class="toolbox-card" onclick="app.addSandboxComponent('switch_single')">Sakelar Tunggal</div>
+              <div class="toolbox-card" onclick="app.addSandboxComponent('switch_double')">Sakelar Ganda</div>
+              <div class="toolbox-card" onclick="app.addSandboxComponent('switch_hotel')">Sakelar Tukar</div>
+              <div class="toolbox-card" onclick="app.addSandboxComponent('switch_cross')">Sakelar Silang</div>
+              <div class="toolbox-card" onclick="app.addSandboxComponent('bulb')">Lampu Bohlam</div>
+              <div class="toolbox-card" onclick="app.addSandboxComponent('pilot_lamp')">Pilot Lamp (Run)</div>
+              <div class="toolbox-card" onclick="app.addSandboxComponent('outlet')">Stop Kontak</div>
+              <div class="toolbox-card" onclick="app.addSandboxComponent('kwh_meter')">KWH Meter PLN</div>
+              <div class="toolbox-card" onclick="app.addSandboxComponent('ground_rod')">Batang Arde (PE)</div>
+              <div class="toolbox-card" onclick="app.addSandboxComponent('contactor')">Kontaktor (KM1)</div>
+              <div class="toolbox-card" onclick="app.addSandboxComponent('tor')">Thermal Overload</div>
+              <div class="toolbox-card" onclick="app.addSandboxComponent('push_button')">Push Button NO</div>
+              <div class="toolbox-card" onclick="app.addSandboxComponent('motor3p')">Motor 3-Fasa</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- WIRE COLOR SELECTOR (PUIL 2011) -->
         <div class="sidebar-section">
-          <span class="mission-badge" id="jobsheet-badge" style="border-color:#10b981; color:#10b981;">Jobsheet Kejuruan</span>
-          <h2 class="mission-title" id="jobsheet-title">Jobsheet Praktik</h2>
-          
-          <div class="section-title">🎯 Tujuan Praktik (Capaian Kompetensi)</div>
-          <ul class="jobsheet-list" id="jobsheet-objectives"></ul>
+          <div class="section-title">🎨 Standar Warna Kabel PUIL 2011</div>
+          <div class="puil-colors">
+            <div class="wire-color-swatch active" style="background:#8B4513;" data-color="#8B4513" title="Fasa 1 / Fasa R (Coklat)">L1</div>
+            <div class="wire-color-swatch" style="background:#111827; border: 1px solid #475569;" data-color="#111827" title="Fasa S (Hitam)">L2</div>
+            <div class="wire-color-swatch" style="background:#6B7280;" data-color="#6B7280" title="Fasa T (Abu-abu)">L3</div>
+            <div class="wire-color-swatch" style="background:#2563EB;" data-color="#2563EB" title="Netral N (Biru)">N</div>
+            <div class="wire-color-swatch" style="background: repeating-linear-gradient(45deg, #16A34A, #16A34A 5px, #facc15 5px, #facc15 10px);" data-color="#16A34A" title="Pembumian / Arde (Kuning-Hijau)">PE</div>
+            <div class="wire-color-swatch" style="background:#ef4444;" data-color="#ef4444" title="DC Positif (Merah)">+</div>
+          </div>
+          <p style="font-size:0.72rem; color:#94a3b8; margin-top:8px;">
+            <em>Klik terminal pin untuk menyambung kabel. Klik kabel untuk menghapusnya.</em>
+          </p>
+        </div>
 
-          <div class="section-title" style="margin-top:10px;">📋 Langkah Kerja (SOP)</div>
-          <div id="jobsheet-steps" class="checklist-container"></div>
+      </div><!-- end .sidebar-scroll-area -->
 
-          <div class="section-title" style="margin-top:10px;">⚠️ Peringatan K3 Keselamatan Kerja</div>
-          <ul class="jobsheet-list" id="jobsheet-safety" style="color:#fdba74;"></ul>
-
-          <button class="btn btn-sm btn-primary" style="width:100%; margin-top:14px;" onclick="app.openPrintReportModal()">
-            🖨️ Cetak Lembar Penilaian / Laporan PDF
+      <!-- STICKY BOTTOM ACTION BAR — always visible, never scrolls away -->
+      <div class="sidebar-action-bar">
+        <button class="btn btn-success" style="width:100%; margin-bottom:8px;" onclick="app.verifyCircuit()">
+          ⚡ Uji &amp; Periksa Rangkaian
+        </button>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-outline btn-sm" style="flex:1;" onclick="app.undoWire()">
+            ↩ Undo Kabel
           </button>
-        </div>
-      </div>
-
-      <!-- 3. TROUBLESHOOTING PANEL (Active in 'troubleshoot' mode) -->
-      <div id="troubleshoot-tools-panel" style="display:none;">
-        <div class="sidebar-section">
-          <span class="mission-badge" style="border-color:#f59e0b; color:#f59e0b;">Uji Kompetensi Kejuruan (UKK)</span>
-          <h2 class="mission-title" id="trouble-title">Kasus 1</h2>
-          <div class="mission-objective" id="trouble-scenario">Skenario kerusakan...</div>
-          
-          <div class="section-title">💡 Petunjuk Diagnosa</div>
-          <div class="mission-theory-box" id="trouble-hint">Petunjuk...</div>
-        </div>
-
-        <div class="sidebar-section">
-          <div class="section-title">Pilih Kasus Gangguan Lapangan</div>
-          <div style="display:flex; flex-direction:column; gap:6px;">
-            <button class="btn btn-outline btn-sm" onclick="app.loadTroubleshootCase(0)">Kasus 1: Lampu Putus Jalur</button>
-            <button class="btn btn-outline btn-sm" onclick="app.loadTroubleshootCase(1)">Kasus 2: MCB Trip / Korslet</button>
-            <button class="btn btn-outline btn-sm" onclick="app.loadTroubleshootCase(2)">Kasus 3: Bodi Nyengat (Grounding)</button>
-            <button class="btn btn-outline btn-sm" onclick="app.loadTroubleshootCase(3)">Kasus 4: Motor 3 Fasa Hilang Fasa</button>
-            <button class="btn btn-outline btn-sm" onclick="app.loadTroubleshootCase(4)">Kasus 5: Kontak Pengunci Lepas</button>
-            <button class="btn btn-outline btn-sm" onclick="app.loadTroubleshootCase(5)">Kasus 6: Fasa Terbalik ke Arde</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 4. SANDBOX TOOLS PANEL (Active in 'sandbox' mode) -->
-      <div id="sandbox-tools-panel" style="display:none;">
-        <div class="sidebar-section">
-          <div class="section-title">📦 Template Rangkaian Siap Uji</div>
-          <select class="dmm-select" onchange="app.sandbox.loadTemplate(this.value)">
-            <option value="simple_lamp">1. Lampu & Sakelar Tunggal</option>
-            <option value="double_lamp">2. Sakelar Ganda (2 Lampu)</option>
-            <option value="outlet_grounding">3. Stop Kontak + Grounding</option>
-            <option value="kwh_app">4. APP PLN & KWH Meter</option>
-            <option value="motor_3phase">5. Penggerak Motor 3 Fasa</option>
-          </select>
-        </div>
-
-        <div class="sidebar-section">
-          <div class="section-title">➕ Tambah Komponen ke Meja</div>
-          <div class="toolbox-grid">
-            <div class="toolbox-card" onclick="app.addSandboxComponent('pln1p')">PLN 1P (220V)</div>
-            <div class="toolbox-card" onclick="app.addSandboxComponent('pln3p')">PLN 3P (380V)</div>
-            <div class="toolbox-card" onclick="app.addSandboxComponent('battery')">Baterai DC 12V</div>
-            <div class="toolbox-card" onclick="app.addSandboxComponent('mcb1p')">MCB 1-Fasa</div>
-            <div class="toolbox-card" onclick="app.addSandboxComponent('mcb3p')">MCB 3-Fasa</div>
-            <div class="toolbox-card" onclick="app.addSandboxComponent('elcb')">ELCB 30mA</div>
-            <div class="toolbox-card" onclick="app.addSandboxComponent('switch_single')">Sakelar Tunggal</div>
-            <div class="toolbox-card" onclick="app.addSandboxComponent('switch_double')">Sakelar Ganda</div>
-            <div class="toolbox-card" onclick="app.addSandboxComponent('switch_hotel')">Sakelar Tukar</div>
-            <div class="toolbox-card" onclick="app.addSandboxComponent('switch_cross')">Sakelar Silang</div>
-            <div class="toolbox-card" onclick="app.addSandboxComponent('bulb')">Lampu Bohlam</div>
-            <div class="toolbox-card" onclick="app.addSandboxComponent('pilot_lamp')">Pilot Lamp (Run)</div>
-            <div class="toolbox-card" onclick="app.addSandboxComponent('outlet')">Stop Kontak</div>
-            <div class="toolbox-card" onclick="app.addSandboxComponent('kwh_meter')">KWH Meter PLN</div>
-            <div class="toolbox-card" onclick="app.addSandboxComponent('ground_rod')">Batang Arde (PE)</div>
-            <div class="toolbox-card" onclick="app.addSandboxComponent('contactor')">Kontaktor (KM1)</div>
-            <div class="toolbox-card" onclick="app.addSandboxComponent('tor')">Thermal Overload</div>
-            <div class="toolbox-card" onclick="app.addSandboxComponent('push_button')">Push Button NO</div>
-            <div class="toolbox-card" onclick="app.addSandboxComponent('motor3p')">Motor 3-Fasa</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- WIRE COLOR SELECTOR (PUIL 2011) -->
-      <div class="sidebar-section">
-        <div class="section-title">🎨 Standar Warna Kabel PUIL 2011</div>
-        <div class="puil-colors">
-          <div class="wire-color-swatch active" style="background:#8B4513;" data-color="#8B4513" title="Fasa 1 / Fasa R (Coklat)">L1</div>
-          <div class="wire-color-swatch" style="background:#111827; border: 1px solid #475569;" data-color="#111827" title="Fasa S (Hitam)">L2</div>
-          <div class="wire-color-swatch" style="background:#6B7280;" data-color="#6B7280" title="Fasa T (Abu-abu)">L3</div>
-          <div class="wire-color-swatch" style="background:#2563EB;" data-color="#2563EB" title="Netral N (Biru)">N</div>
-          <div class="wire-color-swatch" style="background: repeating-linear-gradient(45deg, #16A34A, #16A34A 5px, #facc15 5px, #facc15 10px);" data-color="#16A34A" title="Pembumian / Arde (Kuning-Hijau)">PE</div>
-          <div class="wire-color-swatch" style="background:#ef4444;" data-color="#ef4444" title="DC Positif (Merah)">+</div>
-        </div>
-        <p style="font-size:0.72rem; color:#94a3b8; margin-top:8px;">
-          <em>Klik terminal pin untuk menyambung kabel. Klik kabel untuk menghapusnya.</em>
-        </p>
-      </div>
-
-      <!-- CONTROL BUTTONS -->
-      <div class="sidebar-section" style="margin-top:auto;">
-        <div style="display:flex; flex-direction:column; gap:8px;">
-          <button class="btn btn-success" onclick="app.verifyCircuit()">
-            ⚡ Uji & Periksa Rangkaian
+          <button class="btn btn-danger btn-sm" onclick="app.resetCurrentLevel()" title="Kembalikan posisi awal sirkuit">
+            🔄 Reset
           </button>
-          <div style="display:flex; gap:8px;">
-            <button class="btn btn-outline btn-sm" style="flex:1;" onclick="app.undoWire()">
-              ↩ Undo Kabel
-            </button>
-            <button class="btn btn-danger btn-sm" onclick="app.resetCurrentLevel()" title="Kembalikan posisi awal sirkuit">
-              🔄 Reset
-            </button>
-          </div>
         </div>
       </div>
 
     </aside>
+
+
 
     <!-- RIGHT WORKBENCH: SVG Circuit Panel -->
     <div class="workbench-container" id="workbench-container">
