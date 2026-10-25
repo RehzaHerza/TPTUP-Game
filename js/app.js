@@ -83,6 +83,7 @@ class VoltMasterApp {
     this.setupEventListeners();
     this.loadLevel(0);
     this.updateStatsUI();
+    setTimeout(() => this.multimeter.dockProbesBesideMultimeter(), 80);
 
     // Show onboarding for first-time student
     if (!this.progress.hasSeenIntro) {
@@ -114,75 +115,91 @@ class VoltMasterApp {
     this.svg.addEventListener('pointerdown', (e) => {
       const isBg = e.target === this.svg || (e.target.tagName === 'rect' && e.target.getAttribute('fill') === 'url(#grid)');
       if (isBg && !this.activeWireStart && !this.draggingTarget) {
-        if (e.cancelable) e.preventDefault(); // Kunci untuk Touchscreen Android TV
+        if (e.cancelable) e.preventDefault();
         this.isCanvasPanning = true;
         this.panStartPos = { x: e.clientX - this.panOffset.x, y: e.clientY - this.panOffset.y };
-        try { this.svg.setPointerCapture(e.pointerId); } catch(err){}
+        try {
+          this.svg.setPointerCapture(e.pointerId);
+          this.capturedPointerId = e.pointerId;
+        } catch(err){}
       }
     }, { passive: false });
 
     container.addEventListener('pointermove', (e) => {
-      // Hanya aktifkan preventDefault jika kita sedang menyeret sesuatu (mencegah scroll di TV Android)
-      if (this.isCanvasPanning || this.draggingTarget) {
+      if (this.isCanvasPanning || this.draggingTarget || this.activeWireStart) {
         if (e.cancelable) e.preventDefault();
       }
 
       const coords = getSVGCoords(e);
       this.mousePos = { x: coords.x, y: coords.y };
 
-      // Handle Canvas Panning
+      // Handle Canvas Panning (Fast DOM update, zero innerHTML lag)
       if (this.isCanvasPanning) {
         this.panOffset.x = e.clientX - this.panStartPos.x;
         this.panOffset.y = e.clientY - this.panStartPos.y;
-        this.render();
+        this.fastUpdateViewport();
         return;
       }
 
-      // Handle probe dragging
+      // Handle probe & component dragging (60fps GPU transform updates)
       if (this.draggingTarget) {
         if (this.draggingTarget.type === 'probe_red') {
           this.multimeter.probeRed.x = this.mousePos.x - this.dragOffset.x;
           this.multimeter.probeRed.y = this.mousePos.y - this.dragOffset.y;
           this.checkProbeSnap('red');
-          this.render();
+          this.fastUpdateProbes();
           return;
         }
         if (this.draggingTarget.type === 'probe_black') {
           this.multimeter.probeBlack.x = this.mousePos.x - this.dragOffset.x;
           this.multimeter.probeBlack.y = this.mousePos.y - this.dragOffset.y;
           this.checkProbeSnap('black');
-          this.render();
+          this.fastUpdateProbes();
           return;
         }
         if (this.draggingTarget.type === 'tespen') {
           this.multimeter.tespenPos.x = this.mousePos.x - this.dragOffset.x;
           this.multimeter.tespenPos.y = this.mousePos.y - this.dragOffset.y;
           this.checkProbeSnap('tespen');
-          this.render();
+          this.fastUpdateProbes();
           return;
         }
-        if (this.draggingTarget.type === 'component' && (this.currentMode === 'sandbox' || this.currentMode === 'jobsheet')) {
+        // Components draggable in ALL modes (Misi, Jobsheet, Troubleshooting, Sandbox)
+        if (this.draggingTarget.type === 'component') {
           const comp = this.components.find(c => c.id === this.draggingTarget.id);
           if (comp) {
-            comp.x = Math.max(10, this.mousePos.x - this.dragOffset.x);
-            comp.y = Math.max(10, this.mousePos.y - this.dragOffset.y);
-            this.render();
+            comp.x = Math.max(10, Math.round(this.mousePos.x - this.dragOffset.x));
+            comp.y = Math.max(10, Math.round(this.mousePos.y - this.dragOffset.y));
+            this.syncAttachedProbes(comp);
+            this.fastUpdateComponent(comp);
             return;
           }
         }
       }
 
-      // If drawing a wire, re-render to update dynamic wire path
+      // If drawing a wire, update active wire path smoothly
       if (this.activeWireStart) {
-        this.render();
+        this.fastUpdateActiveWire();
       }
     }, { passive: false });
 
-    // Handle pelepasan pointer (mouse dilepas / jari diangkat)
+    // Handle pelepasan pointer (mouse dilepas / jari diangkat dari touchscreen)
     const handlePointerUp = (e) => {
+      const wasDragging = !!this.draggingTarget || this.isCanvasPanning;
+      if (this.draggingTarget && this.draggingTarget.type === 'component') {
+        const compEl = document.getElementById(`comp_${this.draggingTarget.id}`);
+        if (compEl) compEl.classList.remove('dragging');
+      }
+
       this.draggingTarget = null;
       this.isCanvasPanning = false;
-      try { this.svg.releasePointerCapture(e.pointerId); } catch(err){}
+
+      try {
+        if (this.capturedPointerId !== null && this.capturedPointerId !== undefined) {
+          this.svg.releasePointerCapture(this.capturedPointerId);
+          this.capturedPointerId = null;
+        }
+      } catch(err){}
 
       let anyReleased = false;
       this.components.forEach(c => {
@@ -191,14 +208,16 @@ class VoltMasterApp {
           anyReleased = true;
         }
       });
-      if (anyReleased) {
+
+      // Finalize drop and sync
+      if (wasDragging || anyReleased) {
         this.recalculate();
         this.render();
       }
     };
 
     window.addEventListener('pointerup', handlePointerUp);
-    window.addEventListener('pointercancel', handlePointerUp); // Penting untuk TV & Stylus jika interupsi sistem muncul
+    window.addEventListener('pointercancel', handlePointerUp);
 
     // Touch Pinch-to-Zoom Support for Tablets & TV Interactive Panels
     container.addEventListener('touchmove', (e) => {
@@ -396,6 +415,7 @@ class VoltMasterApp {
 
     this.recalculate();
     this.fitToScreen();
+    this.multimeter.dockProbesBesideMultimeter();
     this.updateChecklistUI();
   }
 
@@ -417,6 +437,7 @@ class VoltMasterApp {
 
     this.recalculate();
     this.fitToScreen();
+    this.multimeter.dockProbesBesideMultimeter();
   }
 
   loadCircuitState(components, wires) {
@@ -425,6 +446,7 @@ class VoltMasterApp {
     this.activeWireStart = null;
     this.recalculate();
     this.fitToScreen();
+    this.multimeter.dockProbesBesideMultimeter();
   }
 
   addSandboxComponent(type) {
@@ -563,15 +585,17 @@ class VoltMasterApp {
   }
 
   startDragging(targetType, id, e) {
-    if (e.cancelable) e.preventDefault(); // Hentikan gestur sentuh lain saat mulai drag
-    
-    // Pointer capture agar jari tidak lepas dari komponen saat digeser cepat
-    try { e.target.setPointerCapture(e.pointerId); } catch(err){}
-    
+    if (e.cancelable) e.preventDefault();
+    try {
+      this.svg.setPointerCapture(e.pointerId);
+      this.capturedPointerId = e.pointerId;
+    } catch(err){}
+
     const rect = this.svg.getBoundingClientRect();
-    const clientX = e.clientX; // PointerEvent otomatis menyatukan koordinat
+    const clientX = e.clientX;
     const clientY = e.clientY;
     const mouseX = (clientX - rect.left - this.panOffset.x) / this.zoomScale;
+    const mouseY = (clientY - rect.top - this.panOffset.y) / this.zoomScale;
 
     let targetX = 0, targetY = 0;
     if (targetType === 'probe_red') {
@@ -588,6 +612,8 @@ class VoltMasterApp {
       if (comp) {
         targetX = comp.x;
         targetY = comp.y;
+        const compEl = document.getElementById(`comp_${comp.id}`);
+        if (compEl) compEl.classList.add('dragging');
       }
     }
 
@@ -596,6 +622,130 @@ class VoltMasterApp {
       x: mouseX - targetX,
       y: mouseY - targetY
     };
+  }
+
+  computeWirePath(wire) {
+    let p1 = null, p2 = null;
+    for (const comp of this.components) {
+      if (comp.getPin(wire.from)) p1 = comp.getPinAbsolutePos(wire.from);
+      if (comp.getPin(wire.to)) p2 = comp.getPinAbsolutePos(wire.to);
+    }
+    if (p1 && p2) {
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const sag = Math.min(80, Math.hypot(dx, dy) * 0.18);
+      const cp1x = p1.x + dx * 0.25;
+      const cp1y = p1.y + dy * 0.25 + sag;
+      const cp2x = p1.x + dx * 0.75;
+      const cp2y = p1.y + dy * 0.75 + sag;
+      return `M ${p1.x} ${p1.y} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
+    }
+    return '';
+  }
+
+  fastUpdateViewport() {
+    const vp = document.getElementById('viewport-group');
+    if (vp) {
+      vp.setAttribute('transform', `translate(${this.panOffset.x}, ${this.panOffset.y}) scale(${this.zoomScale})`);
+    }
+  }
+
+  syncAttachedProbes(comp) {
+    if (this.multimeter.probeRed.attachedPin && this.multimeter.probeRed.attachedPin.startsWith(comp.id)) {
+      const p = comp.getPinAbsolutePos(this.multimeter.probeRed.attachedPin);
+      this.multimeter.probeRed.x = p.x;
+      this.multimeter.probeRed.y = p.y;
+    }
+    if (this.multimeter.probeBlack.attachedPin && this.multimeter.probeBlack.attachedPin.startsWith(comp.id)) {
+      const p = comp.getPinAbsolutePos(this.multimeter.probeBlack.attachedPin);
+      this.multimeter.probeBlack.x = p.x;
+      this.multimeter.probeBlack.y = p.y;
+    }
+    if (this.multimeter.tespenPos.attachedPin && this.multimeter.tespenPos.attachedPin.startsWith(comp.id)) {
+      const p = comp.getPinAbsolutePos(this.multimeter.tespenPos.attachedPin);
+      this.multimeter.tespenPos.x = p.x;
+      this.multimeter.tespenPos.y = p.y;
+    }
+  }
+
+  fastUpdateComponent(comp) {
+    const compEl = document.getElementById(`comp_${comp.id}`);
+    if (compEl) {
+      compEl.setAttribute('transform', `translate(${comp.x}, ${comp.y})`);
+    }
+
+    this.wires.forEach((wire, idx) => {
+      if (wire.from.startsWith(comp.id) || wire.to.startsWith(comp.id)) {
+        const pathData = this.computeWirePath(wire);
+        if (pathData) {
+          const wHit = document.getElementById(`wire_hit_${idx}`);
+          if (wHit) wHit.setAttribute('d', pathData);
+          const wShadow = document.getElementById(`wire_shadow_${idx}`);
+          if (wShadow) wShadow.setAttribute('d', pathData);
+          const wPath = document.getElementById(`wire_path_${idx}`);
+          if (wPath) wPath.setAttribute('d', pathData);
+          const wAnim = document.getElementById(`wire_anim_${idx}`);
+          if (wAnim) wAnim.setAttribute('d', pathData);
+        }
+      }
+    });
+
+    this.fastUpdateProbes();
+  }
+
+  fastUpdateProbes() {
+    const prEl = document.getElementById('probe_red');
+    if (prEl) prEl.setAttribute('transform', `translate(${this.multimeter.probeRed.x}, ${this.multimeter.probeRed.y})`);
+
+    const pbEl = document.getElementById('probe_black');
+    if (pbEl) pbEl.setAttribute('transform', `translate(${this.multimeter.probeBlack.x}, ${this.multimeter.probeBlack.y})`);
+
+    const tpEl = document.getElementById('tespen_tool');
+    if (tpEl) tpEl.setAttribute('transform', `translate(${this.multimeter.tespenPos.x}, ${this.multimeter.tespenPos.y})`);
+
+    const jacks = this.multimeter.getDMMJackPositions();
+    const prX = this.multimeter.probeRed.x;
+    const prY = this.multimeter.probeRed.y;
+    const pbX = this.multimeter.probeBlack.x;
+    const pbY = this.multimeter.probeBlack.y;
+
+    const cpRedX = (prX + jacks.red.x) / 2;
+    const cpRedY = Math.max(prY, jacks.red.y) + 40;
+    const cableRedPath = `M ${jacks.red.x} ${jacks.red.y} Q ${cpRedX} ${cpRedY} ${prX} ${prY - 70}`;
+
+    const cpBlackX = (pbX + jacks.black.x) / 2;
+    const cpBlackY = Math.max(pbY, jacks.black.y) + 50;
+    const cableBlackPath = `M ${jacks.black.x} ${jacks.black.y} Q ${cpBlackX} ${cpBlackY} ${pbX} ${pbY - 70}`;
+
+    document.getElementById('cable_red_shadow')?.setAttribute('d', cableRedPath);
+    document.getElementById('cable_red_main')?.setAttribute('d', cableRedPath);
+    document.getElementById('cable_black_shadow')?.setAttribute('d', cableBlackPath);
+    document.getElementById('cable_black_main')?.setAttribute('d', cableBlackPath);
+  }
+
+  fastUpdateActiveWire() {
+    if (!this.activeWireStart) return;
+    let p1 = null;
+    for (const comp of this.components) {
+      if (comp.getPin(this.activeWireStart)) {
+        p1 = comp.getPinAbsolutePos(this.activeWireStart);
+        break;
+      }
+    }
+    if (p1) {
+      const p2 = this.mousePos;
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const sag = Math.min(60, Math.hypot(dx, dy) * 0.15);
+      const cp1x = p1.x + dx * 0.25;
+      const cp1y = p1.y + dy * 0.25 + sag;
+      const cp2x = p1.x + dx * 0.75;
+      const cp2y = p1.y + dy * 0.75 + sag;
+      const pathData = `M ${p1.x} ${p1.y} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
+
+      const activePath = document.getElementById('active_wire_path');
+      if (activePath) activePath.setAttribute('d', pathData);
+    }
   }
 
   recalculate() {
@@ -855,16 +1005,16 @@ class VoltMasterApp {
         const isCurrentFlowing = this.engine.isWireEnergized(wire);
 
         svgHtml += `
-          <g class="wire-group ${isCurrentFlowing ? 'wire-energized' : ''}" onclick="app.deleteWire(${idx})" style="cursor:pointer;" title="Klik untuk menghapus kabel ini">
+          <g class="wire-group ${isCurrentFlowing ? 'wire-energized' : ''}" id="wire_group_${idx}" onclick="app.deleteWire(${idx})" style="cursor:pointer;" title="Klik untuk menghapus kabel ini">
             <!-- Fat invisible stroke for easy clicking on touch & mouse -->
-            <path d="${pathData}" fill="none" stroke="transparent" stroke-width="18"/>
+            <path id="wire_hit_${idx}" d="${pathData}" fill="none" stroke="transparent" stroke-width="18"/>
             <!-- Outline shadow -->
-            <path d="${pathData}" fill="none" stroke="#000" stroke-width="7" opacity="0.45"/>
+            <path id="wire_shadow_${idx}" d="${pathData}" fill="none" stroke="#000" stroke-width="7" opacity="0.45"/>
             <!-- Main Wire -->
-            <path d="${pathData}" fill="none" stroke="${wire.color || '#8B4513'}" stroke-width="4.5" stroke-linecap="round"/>
+            <path id="wire_path_${idx}" d="${pathData}" fill="none" stroke="${wire.color || '#8B4513'}" stroke-width="4.5" stroke-linecap="round"/>
             ${isCurrentFlowing ? `
               <!-- Animated current flow particle dash -->
-              <path d="${pathData}" fill="none" stroke="#ffffff" stroke-width="2" stroke-dasharray="5,12" stroke-linecap="round" class="wire-current-anim"/>
+              <path id="wire_anim_${idx}" d="${pathData}" fill="none" stroke="#ffffff" stroke-width="2" stroke-dasharray="5,12" stroke-linecap="round" class="wire-current-anim"/>
             ` : ''}
           </g>
         `;
@@ -895,8 +1045,8 @@ class VoltMasterApp {
 
         svgHtml += `
           <!-- Active wire halo pulse -->
-          <circle cx="${p1.x}" cy="${p1.y}" r="15" fill="none" stroke="${this.selectedWireColor}" stroke-width="2.5" class="rotor-spinning" stroke-dasharray="4,4"/>
-          <path d="${pathData}" fill="none" stroke="${this.selectedWireColor}" stroke-width="3.5" stroke-dasharray="6,4" stroke-linecap="round"/>
+          <circle id="active_wire_halo" cx="${p1.x}" cy="${p1.y}" r="15" fill="none" stroke="${this.selectedWireColor}" stroke-width="2.5" class="rotor-spinning" stroke-dasharray="4,4"/>
+          <path id="active_wire_path" d="${pathData}" fill="none" stroke="${this.selectedWireColor}" stroke-width="3.5" stroke-dasharray="6,4" stroke-linecap="round"/>
         `;
       }
     }
@@ -926,12 +1076,12 @@ class VoltMasterApp {
         }
       });
 
-      // Draggable components in sandbox and jobsheet
+      // Draggable components across ALL modes (Misi, Jobsheet, Troubleshooting, Sandbox)
       const compEl = document.getElementById(`comp_${comp.id}`);
-      if (compEl && (this.currentMode === 'sandbox' || this.currentMode === 'jobsheet')) {
-        compEl.style.cursor = 'move';
+      if (compEl) {
+        compEl.style.cursor = 'grab';
         compEl.addEventListener('pointerdown', (e) => {
-          if (e.target.closest('.pin-terminal') || e.target.closest('.mcb-lever') || e.target.tagName === 'circle') return;
+          if (e.target.closest('.pin-terminal') || e.target.closest('.mcb-lever') || e.target.closest('.btn-toggle-switch') || e.target.closest('.push-btn-act')) return;
           this.startDragging('component', comp.id, e);
         });
       }

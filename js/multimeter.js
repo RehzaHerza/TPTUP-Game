@@ -34,10 +34,10 @@ class MultimeterTool {
     }
 
     dmmPanel.innerHTML = `
-      <div class="dmm-header">
+      <div class="dmm-header" id="dmm-drag-handle" style="cursor:grab;" title="Seret untuk memindahkan multimeter">
         <span class="dmm-brand">⚡ VOLTCRAFT DMM-500</span>
         <div style="display:flex; align-items:center; gap:8px;">
-          <span class="dmm-cat">CAT III 600V</span>
+          <span class="dmm-cat" style="font-size:0.65rem; color:#38bdf8;">CAT III 600V</span>
           <button class="dmm-min-btn" onclick="app.multimeter.toggleMinimize()" title="Perkecil/Perbesar Tampilan Multimeter">─</button>
         </div>
       </div>
@@ -78,7 +78,7 @@ class MultimeterTool {
       </div>
 
       <div class="dmm-footer">
-        <button class="btn btn-sm btn-outline" onclick="app.multimeter.resetProbes()" title="Kembalikan kedua probe ke meja ukur">
+        <button class="btn btn-sm btn-outline" onclick="app.multimeter.resetProbes()" title="Kembalikan kedua probe ke samping multimeter">
           📍 Reset Probe
         </button>
       </div>
@@ -118,7 +118,7 @@ class MultimeterTool {
 
       startX = e.touches ? e.touches[0].clientX : e.clientX;
       startY = e.touches ? e.touches[0].clientY : e.clientY;
-      e.preventDefault();
+      if (e.cancelable) e.preventDefault();
     };
 
     const onMove = (e) => {
@@ -138,20 +138,24 @@ class MultimeterTool {
 
       panel.style.left = currentLeft + 'px';
       panel.style.top = currentTop + 'px';
+
+      // Live update probe cables as multimeter moves
+      if (window.app && window.app.fastUpdateProbes) {
+        window.app.fastUpdateProbes();
+      }
     };
 
     const onMoveEnd = () => {
       if (!isDragging) return;
       isDragging = false;
       handle.style.cursor = 'grab';
+      if (window.app) window.app.render();
     };
 
-    handle.addEventListener('mousedown', onMoveStart);
-    handle.addEventListener('touchstart', onMoveStart, { passive: false });
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('touchmove', onMove, { passive: false });
-    document.addEventListener('mouseup', onMoveEnd);
-    document.addEventListener('touchend', onMoveEnd);
+    handle.addEventListener('pointerdown', onMoveStart);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onMoveEnd);
+    window.addEventListener('pointercancel', onMoveEnd);
   }
 
   setMode(newMode) {
@@ -181,12 +185,72 @@ class MultimeterTool {
     if (dmm) dmm.classList.toggle('minimized');
   }
 
-  resetProbes() {
-    this.probeRed = { x: 720, y: 320, attachedPin: null, isDragging: false };
-    this.probeBlack = { x: 770, y: 320, attachedPin: null, isDragging: false };
-    this.tespenPos = { x: 820, y: 320, attachedPin: null, isDragging: false };
+  dockProbesBesideMultimeter() {
+    const hud = document.getElementById('multimeter-hud');
+    const container = document.getElementById('workbench-container') || document.body;
+    const contRect = container.getBoundingClientRect();
+
+    let hudLeft = contRect.width - 275;
+    let hudTop = contRect.height - 350;
+    if (hud) {
+      const hudRect = hud.getBoundingClientRect();
+      hudLeft = hudRect.left - contRect.left;
+      hudTop = hudRect.top - contRect.top;
+    }
+
+    const panX = window.app ? window.app.panOffset.x : 0;
+    const panY = window.app ? window.app.panOffset.y : 0;
+    const zoom = window.app ? window.app.zoomScale : 1.0;
+
+    const toSVG = (sx, sy) => ({
+      x: Math.round((sx - panX) / zoom),
+      y: Math.round((sy - panY) / zoom)
+    });
+
+    // Stand neatly in a column/row to the left side of the multimeter
+    const pRed    = toSVG(hudLeft - 105, hudTop + 140);
+    const pBlack  = toSVG(hudLeft - 68,  hudTop + 120);
+    const pTespen = toSVG(hudLeft - 30,  hudTop + 100);
+
+    this.probeRed   = { x: pRed.x,   y: pRed.y,   attachedPin: null, isDragging: false };
+    this.probeBlack = { x: pBlack.x, y: pBlack.y, attachedPin: null, isDragging: false };
+    this.tespenPos = { x: pTespen.x, y: pTespen.y, attachedPin: null, isDragging: false };
+
     this.evaluate();
     if (window.app) window.app.render();
+  }
+
+  resetProbes() {
+    this.dockProbesBesideMultimeter();
+  }
+
+  getDMMJackPositions() {
+    const hud = document.getElementById('multimeter-hud');
+    const container = document.getElementById('workbench-container') || document.body;
+    const contRect = container.getBoundingClientRect();
+
+    let hudLeft = contRect.width - 275;
+    let hudBottom = contRect.height - 30;
+    if (hud) {
+      const hudRect = hud.getBoundingClientRect();
+      hudLeft = hudRect.left - contRect.left;
+      hudBottom = hudRect.bottom - contRect.top;
+    }
+
+    const panX = window.app ? window.app.panOffset.x : 0;
+    const panY = window.app ? window.app.panOffset.y : 0;
+    const zoom = window.app ? window.app.zoomScale : 1.0;
+
+    return {
+      red: {
+        x: Math.round((hudLeft + 65 - panX) / zoom),
+        y: Math.round((hudBottom - 20 - panY) / zoom)
+      },
+      black: {
+        x: Math.round((hudLeft + 120 - panX) / zoom),
+        y: Math.round((hudBottom - 20 - panY) / zoom)
+      }
+    };
   }
 
   evaluate() {
@@ -309,13 +373,13 @@ class MultimeterTool {
     this.evaluate();
   }
 
-  // Renders the realistic probes along with flexible cables connecting to bottom-right HUD
+  // Renders the realistic probes along with flexible cables connecting to HUD jacks
   renderProbesSVG() {
     let svg = '';
 
-    // Fixed multimeter jack coordinates relative to workbench container
-    const dmmJackRed = { x: 740, y: 560 };
-    const dmmJackBlack = { x: 770, y: 560 };
+    const jacks = this.getDMMJackPositions();
+    const dmmJackRed = jacks.red;
+    const dmmJackBlack = jacks.black;
 
     const prX = this.probeRed.x;
     const prY = this.probeRed.y;
@@ -327,8 +391,8 @@ class MultimeterTool {
     const cpRedY = Math.max(prY, dmmJackRed.y) + 40;
     const cableRedPath = `M ${dmmJackRed.x} ${dmmJackRed.y} Q ${cpRedX} ${cpRedY} ${prX} ${prY - 70}`;
     svg += `
-      <path d="${cableRedPath}" fill="none" stroke="#000" stroke-width="6" opacity="0.3"/>
-      <path d="${cableRedPath}" fill="none" stroke="#ef4444" stroke-width="4" stroke-linecap="round"/>
+      <path id="cable_red_shadow" d="${cableRedPath}" fill="none" stroke="#000" stroke-width="6" opacity="0.3"/>
+      <path id="cable_red_main" d="${cableRedPath}" fill="none" stroke="#ef4444" stroke-width="4" stroke-linecap="round"/>
     `;
 
     // Flexible cable for BLACK PROBE
@@ -336,8 +400,8 @@ class MultimeterTool {
     const cpBlackY = Math.max(pbY, dmmJackBlack.y) + 50;
     const cableBlackPath = `M ${dmmJackBlack.x} ${dmmJackBlack.y} Q ${cpBlackX} ${cpBlackY} ${pbX} ${pbY - 70}`;
     svg += `
-      <path d="${cableBlackPath}" fill="none" stroke="#000" stroke-width="6" opacity="0.3"/>
-      <path d="${cableBlackPath}" fill="none" stroke="#1e293b" stroke-width="4" stroke-linecap="round"/>
+      <path id="cable_black_shadow" d="${cableBlackPath}" fill="none" stroke="#000" stroke-width="6" opacity="0.3"/>
+      <path id="cable_black_main" d="${cableBlackPath}" fill="none" stroke="#1e293b" stroke-width="4" stroke-linecap="round"/>
     `;
 
     // Highlight snap circle if probe attached

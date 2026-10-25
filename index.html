@@ -16,43 +16,65 @@
         ☰
       </button>
       <div class="brand-icon">⚡</div>
-      <div>
+      <div class="brand-info">
         <h1 class="brand-title">VoltMaster SMK</h1>
-        <div class="brand-sub">Simulator Instalasi & Pengukuran Listrik (PUIL 2011)</div>
+        <div class="brand-sub">Simulator Instalasi &amp; Pengukuran Listrik (PUIL 2011)</div>
       </div>
     </div>
 
-    <!-- Navigation Modes -->
-    <nav class="nav-tabs">
-      <button class="nav-tab active" id="tab-misi" onclick="app.switchTab('misi')">🎯 Misi Praktik (16 Lvl)</button>
-      <button class="nav-tab" id="tab-jobsheet" onclick="app.switchTab('jobsheet')">📋 Modul & Jobsheet</button>
-      <button class="nav-tab" id="tab-troubleshoot" onclick="app.switchTab('troubleshoot')">🛠️ Troubleshooting (UKK)</button>
-      <button class="nav-tab" id="tab-sandbox" onclick="app.switchTab('sandbox')">🧪 Meja Kerja Bebas</button>
-      <button class="nav-tab" id="tab-puil" onclick="togglePUILModal(true)">📖 Standar PUIL & K3</button>
+    <!-- Navigation Modes (Center Tabs) -->
+    <nav class="nav-tabs" aria-label="Mode Simulasi">
+      <button class="nav-tab active" id="tab-misi" onclick="app.switchTab('misi')" title="Misi Pembelajaran Terstruktur (16 Level)">
+        <span class="tab-icon">🎯</span>
+        <span class="tab-label">Misi Praktik (16 Lvl)</span>
+      </button>
+      <button class="nav-tab" id="tab-jobsheet" onclick="app.switchTab('jobsheet')" title="Modul dan Jobsheet SMK">
+        <span class="tab-icon">📋</span>
+        <span class="tab-label">Modul &amp; Jobsheet</span>
+      </button>
+      <button class="nav-tab" id="tab-troubleshoot" onclick="app.switchTab('troubleshoot')" title="Skenario Kerusakan Uji Kompetensi Kejuruan">
+        <span class="tab-icon">🛠️</span>
+        <span class="tab-label">Troubleshooting (UKK)</span>
+      </button>
+      <button class="nav-tab" id="tab-sandbox" onclick="app.switchTab('sandbox')" title="Eksperimen Bebas dan Pengujian Komponen">
+        <span class="tab-icon">🧪</span>
+        <span class="tab-label">Meja Kerja Bebas</span>
+      </button>
+      <button class="nav-tab" id="tab-puil" onclick="togglePUILModal(true)" title="Standar PUIL 2011 &amp; Aturan K3">
+        <span class="tab-icon">📖</span>
+        <span class="tab-label">Standar PUIL &amp; K3</span>
+      </button>
     </nav>
 
     <!-- Quick Tools, Student Stats & Sound Toggle -->
     <div class="user-stats">
-      <button class="btn btn-sm btn-outline" id="btn-tv-mode" onclick="app.toggleTVMode()" title="Mode TV Interaktif / Layar Besar Lab">
-        📺 Mode TV
-      </button>
-      <button class="btn btn-sm btn-outline" onclick="app.showOnboardingModal()" title="Panduan Penggunaan">
-        ❓ Panduan
-      </button>
-      <button class="btn btn-sm btn-outline" onclick="app.toggleFullscreen()" title="Layar Penuh">
-        ⛶ Layar Penuh
-      </button>
-      <div class="stat-pill stat-pill-xp">
-        <span>⭐</span>
-        <span id="total-xp">0 XP</span>
+      <div class="nav-tools-group">
+        <button class="btn btn-sm btn-nav-tool" id="btn-tv-mode" onclick="app.toggleTVMode()" title="Mode TV Interaktif / Layar Besar Lab">
+          📺 <span class="nav-btn-text">Mode TV</span>
+        </button>
+        <button class="btn btn-sm btn-nav-tool" onclick="app.showOnboardingModal()" title="Panduan Penggunaan">
+          ❓ <span class="nav-btn-text">Panduan</span>
+        </button>
+        <button class="btn btn-sm btn-nav-tool" onclick="app.toggleFullscreen()" title="Layar Penuh">
+          ⛶ <span class="nav-btn-text">Layar Penuh</span>
+        </button>
+        <button class="btn btn-sm btn-nav-tool" id="sound-btn" onclick="toggleAudio()" title="Suara ON/OFF">
+          🔊 <span class="nav-btn-text">Suara</span>
+        </button>
       </div>
-      <div class="stat-pill stat-pill-progress">
-        <span>🎓</span>
-        <span id="overall-progress">0% Selesai</span>
+
+      <div class="nav-stats-divider"></div>
+
+      <div class="nav-stats-group">
+        <div class="stat-pill stat-pill-xp" title="Total Poin Pengalaman Siswa">
+          <span>⭐</span>
+          <span id="total-xp">0 XP</span>
+        </div>
+        <div class="stat-pill stat-pill-progress" title="Persentase Penyelesaian">
+          <span>🎓</span>
+          <span id="overall-progress">0% Selesai</span>
+        </div>
       </div>
-      <button class="btn btn-sm btn-outline" id="sound-btn" onclick="toggleAudio()" title="Suara ON/OFF">
-        🔊 Suara
-      </button>
     </div>
   </header>
 
